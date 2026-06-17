@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S3 solve_pointing (blind plate-solve)"
 last_increment_id: "S2 render (synthetic scene + sealed truth)"
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 6815c325950c1767486557c29d67e17111f9edd5
 green_suites:
@@ -29,7 +29,7 @@ next_action: >-
   review over git diff main..feat/S3, with the reviewer INDEPENDENTLY re-running the blind solve + checking
   non-circularity (NEVER /code-review ultra). Merge on green + all dispositioned.
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 99310, started: 2026-06-17T15:17:28+0800}
 
 # --- post-S3-plan note (read before the S3 BUILD tick's §3.5 gate) ---
 # S3 plan LOCKED this tick (FRESH → PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan (SHA
