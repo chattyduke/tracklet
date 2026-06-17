@@ -1,41 +1,46 @@
 ---
 current_milestone: M0
-current_increment: "S2 render (synthetic scene + sealed truth)"
-last_increment_id: "S1 scene + frozen real-data fixtures"
-phase: BUILD
-status: PLAN_LOCKED_AWAITING_BUILD
-last_green_sha: 274624fd336e3aa6c2e691a97f69efd4d7ba6727
+current_increment: "S3 solve_pointing (blind plate-solve)"
+last_increment_id: "S2 render (synthetic scene + sealed truth)"
+phase: HANSEI
+status: FRESH
+last_green_sha: 6815c325950c1767486557c29d67e17111f9edd5
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 41, failed: 0}
+  - {cmd: 'pytest -m "not solver"', passed: 60, failed: 0}
   - {cmd: 'scripts/_smoke_solve.py (S0 @solver gate — formal golden e2e is S7)', passed: 1, failed: 0, residual_arcsec: 14.2}
 plan_file: ~/.claude/plans/lucky-dazzling-parasol.md
 plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
-open_findings: []  # all S1 review findings dispositioned at tick 5 (F1-F5 fixed + independently verified, F6 rejected)
+open_findings: []  # S2 review (mandatory 2nd pass) ACCEPT @ tick 7; 2 NITs rejected-for-S2; streak-brightness carried as an S3 watch-item (see next_action + tick-7 hansei)
 next_action: >-
-  BUILD S2 (Sprint 2: render — synthetic scene + SEALED truth) — the locked design brief is at the
-  bottom of this file (tick 6). Cut feat/S2 off main. Implement src/tracklet/render.py
-  render_scene(scene, catalogue, tle) -> RenderResult via /tdd-harness or a spawned Generator. BUILD TO
-  THE SEAL from the first commit: render is the SOLE writer of truth.json AND image.fits MUST be WCS-FREE
-  (no CRVAL/CD*/CTYPE — assert it). Synthetic RA---TAN/DEC--TAN WCS (negative CD1_1, crpix center,
-  wcs_world2pix origin=0, img[y,x] Y-flip), Gaussian-PSF Gaia stars, Skyfield streak at exposure
-  start/mid/end (truth = MIDPOINT), deterministic Poisson+read noise via default_rng(seed). ACs 2.1-2.5:
-  determinism (same-seed array hash), clean-FITS, truth.json holds injected truth, WCS round-trip sub-px,
-  streak endpoints match geometry. Consume frozen S1 fixtures OFFLINE. THEN PHASE 5 is HIGH-RISK (first
-  truth.json writer + WCS math) → MANDATORY second independent LOCAL review pass over git diff
-  main..feat/S2 (NEVER /code-review ultra). Merge on green + all dispositioned. Use ~/tracklet/.venv/bin/python.
+  S3 (Sprint 3: solve_pointing — blind plate-solve) is the next rung — the FIRST @solver increment and
+  HIGH-RISK (WCS / plate-solve path). Next tick opens FRESH -> GENBA -> RESEARCH (SKIP — solver + indexes
+  already installed at S0; the de-risk is empirical, done in the BUILD not via /deep-research) -> IDEATE
+  (BRIEF design brief: solve_pointing(image_path, scale_hint) -> SolveResult|SolveFailure; headless blind
+  solve-field --scale-units degwidth --scale-low/high from the camera model, --downsample 2 --no-plots
+  --overwrite, NO --ra/--dec seed; parse .wcs -> astropy WCS; SolveFailure (not exception) on no-solve;
+  reads NO truth) -> PLAN (JIT shortcut: Sprint 3 ACs 3.1-3.3, same SHA; lock + end at ExitPlanMode).
+  CARRIED S3 WATCH-ITEM (from the S2 review): the rendered streak peak (~162k e) is very bright and the
+  _STREAK_PEAK_E=8e3 constant in render.py is misleading vs the actual peak; the plan's Sprint 3 warns a
+  bright/saturated streak can spawn spurious solve-field detections — so AC 3.1 (real blind solve on the
+  GOLDEN STREAKED frame) must be run for real, and if the streak perturbs the solve, mitigate per the plan
+  (cap streak peak brightness in render.py + fix that constant to be honest, OR --downsample, then coarse
+  pointing hint, then ASTAP). The S3 BUILD's @solver test (AC 3.1) is run with ~/tracklet/.venv/bin/python
+  against the rendered frame; S3's review is HIGH-RISK -> mandatory 2nd local pass.
 human_gate: false
-tick_lock: {pid: 97720, started: 2026-06-17T14:10:23+0800}
+tick_lock: null
 
-# --- post-S2-plan note (read before the S2 BUILD tick's §3.5 gate) ---
-# S2 plan LOCKED this tick (FRESH → PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan
-# (plan_sha256 unchanged). main HEAD is now the S2 plan-lock commit, a few loop-authored commits past
-# last_green_sha 274624f (S1) — expected, NOT a §3.5 anomaly. S2 BUILD tick: assert tree clean + only
-# loop-authored commits since 274624f, then cut feat/S2 off main. S2 is HIGH-RISK (render = first/only
-# truth.json writer + WCS math) → PHASE 5 gets a MANDATORY second independent LOCAL review pass. Build to
-# the seal (truth.json sole-writer; image.fits WCS-free) from the first commit. Frozen scene (coherent):
-# ISS alt 73.1° over Perth, 0.49 d from epoch, 2.1° cone / 8821 stars, obs_utc 2026-06-17T08:36:12Z,
-# center (133.860, -42.593). venv ~/tracklet/.venv (Python 3.14.4).
+# --- post-S2 note (read before the next PLAN/BUILD tick) ---
+# S2 (render) merged GREEN at last_green_sha 6815c32 (--no-ff); the SEAL is real + adversarially verified
+# (image.fits WCS-free via raw-header check; render sole truth.json writer; solving signatures byte-identical
+# to main → non-circularity survives; off-center flux-centroid 0.03px → no CD-sign/Y-flip bug; 5/5 mutation
+# probes caught). main HEAD after this tick is the bookkeeping commit one past 6815c32 — expected, NOT a §3.5
+# anomaly (FRESH planning tick does not build). render artifacts: render_scene(scene, catalogue, tle, out_dir)
+# -> RenderResult; image.fits + truth.json under out_dir (gitignored). NEXT rung S3 (solve_pointing, FIRST
+# @solver increment, HIGH-RISK). S3 WATCH-ITEM (carried from the S2 review): streak peak ~162k e is bright +
+# the _STREAK_PEAK_E constant is misleading — AC 3.1 blind-solves the real streaked frame; if it perturbs the
+# solve, cap streak brightness (+ fix the constant) / --downsample / hint / ASTAP per plan Sprint 3.
+# venv ~/tracklet/.venv (Python 3.14.4); solve-field + 4100 indexes installed at S0.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -223,3 +228,9 @@ clear: (a) implements the render stub (re-invents nothing); (b) render IS the so
 WCS-free — the seal done correctly, not broken; (c) all signed module contracts preserved (render_scene
 signature per the contract table); (d) scope == Sprint 2 verbatim.
 ```
+
+- [tick 7 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for S2 (keystone); verify PHASE-4 gates + baseline before building. → Action(Read state; git branch/HEAD/clean + commits since 274624f; plan SHA; baseline pytest) → Observation: clean tree @ f6f415b, only loop-authored commits since S1-green, no feat/* branches, plan SHA matches d7237cdd…, baseline 41/41 green. Cut feat/S2.
+- [tick 7 | BUILD] Thought: build the render keystone under TDD via a spawned Generator (parent stays lean), TO THE SEAL. → Action(spawn general-purpose Generator on feat/S2: render_scene — synthetic TAN WCS neg-CD1_1, Gaia Gaussian-PSF stars, Skyfield streak start/mid/end (truth=midpoint), deterministic Poisson+read noise, image.fits WCS-FREE + truth.json sole-writer; ACs 2.1-2.5) → Observation: Generator DONE — 3 commits (RED 10a9be4, GREEN 45d66f5, refactor 2223134); 60/60 (41 baseline + 19 render). INDEPENDENTLY VERIFIED by parent: image.fits WCS-free (raw header = only SIMPLE/BITPIX/NAXIS*/EXTEND/BUNIT/TELESCOP), truth.json sole writer = render.py:345, midpoint px (1023.50,1023.50)=frame center, scope clean (render.py + test_render.py only).
+- [tick 7 | REVIEW] Thought: S2 HIGH-RISK (sealed-truth write path + WCS math) → MANDATORY 2nd independent LOCAL review. → Action(spawn general-purpose reviewer over `git diff main..feat/S2`) → Observation: VERDICT ACCEPT. Seal holds (raw-header WCS-free, render sole writer, solving sigs byte-identical to main → non-circularity SURVIVES); WCS provably correct (reviewer's OWN off-center flux-centroid residual 0.03px over 30 stars; E→smaller-x, N→larger-y; round-trip tests non-tautological); streak geometry independently re-propagated runs through bright flux; determinism mutation-proven (no now()/global rng); 5/5 test-honesty mutations caught; 60 green. 2 NITs: (a) catalogue_ref re-glob → REJECTED (harmless); (b) streak peak ~162k e ≫ _STREAK_PEAK_E=8e3 (constant misleading) + a bright streak may perturb solve-field → REJECTED for S2 (no AC impact; streak bright + on-line) + CARRIED as an S3 watch-item (plan Sprint 3 mitigations).
+- [tick 7 | INTEGRATE] Thought: gate passed (ACCEPT + all dispositioned + green) → integrate. → Action(merge --no-ff feat/S2→main; pytest; delete feat/S2) → Observation: merged @ 6815c32; 60/60 non-solver green on main; branch deleted. S2 ≠ a milestone (M0 needs S0-S7) → no tag. no_progress_count stays 0 (green increment landed).
+- [tick 7 | HANSEI] What worked: the KEYSTONE landed clean in ONE tick — the spawned Generator (~123K tok build, compact report to the parent) + a rigorous MANDATORY 2nd review that VERIFIED the seal + WCS by its OWN computation. The off-center flux-centroid residual of 0.03px is the strongest possible evidence there is no CD-sign / Y-flip bug — exactly the WCS-pitfall class the plan flagged. The sealed-truth proof's foundation is now ADVERSARIALLY CONFIRMED, not asserted. KAIZEN (S3): the rendered streak is very bright (~162k e) and the _STREAK_PEAK_E=8e3 constant misdescribes it — S3's AC 3.1 (a REAL blind solve on the actual streaked golden frame) is the empirical test of whether that brightness perturbs solve-field's internal source extraction; if it does, cap the streak peak in render.py (+ make the constant honest) and/or --downsample, then coarse hint, then ASTAP, per plan Sprint 3. Carried in next_action + the post-S2 note so the S3 tick cannot lose it. Anti-spin: green merge → no_progress reset to 0.
