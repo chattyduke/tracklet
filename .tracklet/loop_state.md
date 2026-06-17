@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S4 detect_streak (Canny+Hough -> midpoint)"
 last_increment_id: "S3 solve_pointing (blind plate-solve)"
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: a4663ab2cd2ed4d2113455909d9b8c1ade63d80b
 green_suites:
@@ -26,7 +26,7 @@ next_action: >-
   (no truth, no WCS math, not a milestone) -> a single thorough local review (PHASE 5) unless the diff is
   >~300 LOC / >8 files; do NOT touch render.py. Merge feat/S4 -> main on green + all findings dispositioned.
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 10785, started: 2026-06-17T12:08:35Z}  # tick 11 — S4 BUILD live
 
 # --- post-S4-plan note (read before the S4 BUILD tick's §3.5 gate) ---
 # S4 plan LOCKED this tick (FRESH -> PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan (SHA
