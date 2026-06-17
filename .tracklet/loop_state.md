@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S1 scene + frozen real-data fixtures"
 last_increment_id: "S0 environment + plate-solver gate"
-phase: REVIEW
+phase: BUILD
 status: FIX_AWAITING_BUILD
 last_green_sha: f87fc9bc6cab4efedbb47bc2285f8173f9ae4944
 green_suites:
@@ -67,7 +67,7 @@ next_action: >-
   non-solver suite green -> merge feat/S1 -> main (--no-ff) + INTEGRATE. Use ~/tracklet/.venv/bin/python.
   If the re-review bounces AGAIN, no_progress hits 2 -> human gate at next tick start (§3.3).
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 92116, started: 2026-06-17T13:00:16+0800}
 
 # --- post-S1-REVIEW-bounce note (read before the FIX tick) ---
 # S1 was BUILT on feat/S1 (30/30 non-solver green) but the adversarial review returned REVISE: the
