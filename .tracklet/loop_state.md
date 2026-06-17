@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S5 measure_position + score (pixel midpoint -> RA/Dec via recovered WCS; arcsec residual vs sealed truth)"
 last_increment_id: "S4 detect_streak (Canny+Hough -> 1D-Gaussian midpoint)"
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 674462e40e425aef6fb46533da6cb6306f6e8d2f
 green_suites:
@@ -39,7 +39,7 @@ next_action: >-
   on failure). Do NOT touch render/solve_pointing/detect_streak. Merge feat/S5 -> main on green + all findings
   dispositioned.
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 11826, started: 2026-06-17T13:30:43Z}  # tick 13 — S5 BUILD live
 
 # --- post-S4-build note (read before the S5 PLAN tick's §3.5 gate) ---
 # S4 detect_streak BUILT + REVIEWED + MERGED this tick (tick 11) -> main @ 674462e (new last_green_sha). main HEAD
