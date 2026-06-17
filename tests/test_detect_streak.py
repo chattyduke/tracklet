@@ -26,7 +26,19 @@ from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 
 from tracklet import detect_streak as ds_module
-from tracklet.detect_streak import DetectFailure, StreakDetection, detect_streak
+from tracklet.detect_streak import (
+    _CANNY_HIGH,
+    _CANNY_LOW,
+    _HOUGH_MAX_LINE_GAP,
+    _HOUGH_MIN_LINE_LENGTH,
+    _HOUGH_THRESHOLD,
+    _SCALE_SIGMA,
+    _merge_collinear,
+    _refine_midpoint_transverse,
+    DetectFailure,
+    StreakDetection,
+    detect_streak,
+)
 from tracklet.render import (
     _SKY_BACKGROUND_E,
     _add_noise,
@@ -121,14 +133,24 @@ def test_detected_midpoint_matches_truth_midpoint(golden):
 def _raw_hough_segments(image_path):
     """Re-run the detector's front-end (background-subtract -> robust uint8 -> Canny -> HoughLinesP)
     to obtain the RAW segment list — the same fragments detect_streak must merge into one streak.
+
+    References the MODULE's own constants (not hardcoded copies) so this reference front-end can
+    never silently diverge from the production detector if the CV parameters are ever tuned.
     """
     data = fits.getdata(image_path).astype(np.float64)
     _, median, std = sigma_clipped_stats(data, sigma=3.0)
     sub = data - median
-    hi = 30.0 * std if std > 0 else 1.0
+    hi = _SCALE_SIGMA * std if std > 0 else 1.0
     scaled = np.clip(sub / hi * 255.0, 0.0, 255.0).astype(np.uint8)
-    edges = cv2.Canny(scaled, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=150, maxLineGap=20)
+    edges = cv2.Canny(scaled, _CANNY_LOW, _CANNY_HIGH)
+    lines = cv2.HoughLinesP(
+        edges,
+        1,
+        np.pi / 180,
+        threshold=_HOUGH_THRESHOLD,
+        minLineLength=_HOUGH_MIN_LINE_LENGTH,
+        maxLineGap=_HOUGH_MAX_LINE_GAP,
+    )
     return [] if lines is None else [tuple(map(float, l[0])) for l in lines]
 
 
@@ -150,8 +172,12 @@ def test_collinear_fragments_merge_to_single_streak(golden):
     result = detect_streak(str(golden.image_path))
     assert isinstance(result, StreakDetection), f"expected a StreakDetection, got {result!r}"
 
-    # The single merged streak spans the full extent of the raw fragments: its length must reach
-    # the longest collinear run, i.e. exceed the longest single raw fragment.
+    # On the golden frame this is a COHERENCE check: detect returns ONE streak spanning at least the
+    # longest collinear run, at the common fragment angle. The golden frame's Hough fragmentation is
+    # mild (one near-full-length fragment), so the RIGOROUS proof that the merge reconstructs a trail
+    # from MANY short fragments — and that a no-merge detector (return the longest single fragment)
+    # FAILS — lives in test_detect_reconstructs_fragmented_trail + test_merge_collinear_unit below,
+    # which control the fragmentation rather than depending on what Hough happens to emit here.
     raw_lengths = [np.hypot(s[2] - s[0], s[3] - s[1]) for s in raw]
     (ex0, ey0), (ex1, ey1) = result.endpoints
     merged_len = float(np.hypot(ex1 - ex0, ey1 - ey0))
@@ -238,3 +264,107 @@ def test_module_does_not_reference_truth():
         assert not any(
             name == forbidden or name.endswith("." + forbidden) for name in imported
         ), f"detect_streak must not import {forbidden}: imports={imported}"
+
+
+# ---------------------------------------------------------------------------
+# AC 4.2 (rigorous, unit) — the merge geometry is load-bearing on CONTROLLED input, independent of
+# whatever HoughLinesP happens to emit on the golden frame.
+# ---------------------------------------------------------------------------
+
+
+def test_merge_collinear_unit():
+    """_merge_collinear collapses several collinear fragments into ONE streak spanning their FULL
+    extent (far beyond the longest single fragment) and ignores an off-line decoy.
+
+    This is the direct proof that the merge is not a pass-through: three fragments along y=500
+    spanning x in [100, 900] (longest single = 250 px) must merge to a ~800 px streak.
+    """
+    frags = [
+        (100.0, 500.0, 280.0, 500.0),  # len 180
+        (350.0, 500.0, 600.0, 500.0),  # len 250
+        (650.0, 500.0, 900.0, 500.0),  # len 250
+        (120.0, 200.0, 300.0, 200.0),  # DECOY: same angle, different offset (y=200) -> excluded
+    ]
+    merged = _merge_collinear(frags)
+    assert merged is not None
+    p0, p1, angle_deg, span = merged
+    assert span == pytest.approx(800.0, abs=1.0), f"merged span {span:.1f} px != full extent ~800"
+    xs = sorted([p0[0], p1[0]])
+    assert xs[0] == pytest.approx(100.0, abs=1.0) and xs[1] == pytest.approx(900.0, abs=1.0)
+    assert min(p0[1], p1[1]) == pytest.approx(500.0, abs=1.0)  # on the y=500 line, NOT the y=200 decoy
+    assert angle_deg == pytest.approx(0.0, abs=1.0)
+    assert _merge_collinear([]) is None  # empty input -> None (defensive contract)
+
+
+def _write_fragmented_trail_fits(
+    path, *, shape=(600, 600), y0=300.0, sky=200.0, peak=500.0, sigma_t=1.5, read=5.0, seed=0
+):
+    """Synthetic frame: background + read noise + a horizontal Gaussian ridge broken into THREE
+    dashes with gaps wider than the detector's maxLineGap, so Hough emits separate short segments.
+    The full trail spans ~530 px; the longest single dash is ~160 px — so only a real merge reaches
+    the full span. No truth.json (detect never reads truth). Deterministic (seeded RNG).
+
+    `peak` is kept in the REAL rendered streak's saturation regime (sub-peak ~a few x the robust
+    uint8 scale ceiling) so the bright bar's Canny edges fall within the detector's merge tolerance —
+    a saturated wide bar (edges > the merge offset tol apart) would be unrepresentative of the
+    actual ~1500-e streak the pipeline detects (whose golden-frame residual is 0.32 px)."""
+    rng = np.random.default_rng(seed)
+    img = np.full(shape, sky, dtype=np.float64)
+    yy = np.arange(shape[0])[:, None].astype(np.float64)
+    ridge = peak * np.exp(-((yy - y0) ** 2) / (2.0 * sigma_t ** 2))  # (H,1) transverse profile
+    dashes = [(50, 210), (235, 395), (420, 580)]  # 160 px dashes, 25 px gaps (> maxLineGap=20)
+    for xa, xb in dashes:
+        img[:, xa:xb] += ridge
+    img += rng.normal(0.0, read, size=shape)
+    fits.PrimaryHDU(data=img.astype(np.float32)).writeto(path, overwrite=True)
+    return dashes
+
+
+def test_detect_reconstructs_fragmented_trail(tmp_path):
+    """End-to-end merge proof: a deliberately FRAGMENTED trail (Hough emits several short collinear
+    segments, none near full length) is reconstructed by detect_streak into ONE full-span streak.
+
+    A no-merge detector that returned the longest single Hough fragment would fail the length
+    assertion (longest dash ~160 px vs full span ~530 px) — so this pins AC 4.2 robustly.
+    """
+    image_path = tmp_path / "fragmented_trail.fits"
+    dashes = _write_fragmented_trail_fits(image_path)
+    full_span = dashes[-1][1] - dashes[0][0]  # 580 - 50 = 530 px
+
+    raw = _raw_hough_segments(image_path)
+    assert len(raw) > 1, f"precondition: expected the dashed trail to fragment, got {len(raw)} segs"
+    assert max(np.hypot(s[2] - s[0], s[3] - s[1]) for s in raw) < 0.6 * full_span, (
+        "precondition: no single raw fragment should approach the full trail span"
+    )
+
+    result = detect_streak(str(image_path))
+    assert isinstance(result, StreakDetection), f"expected a StreakDetection, got {result!r}"
+    assert result.length_px > 0.85 * full_span, (
+        f"merged length {result.length_px:.1f} px did not reconstruct the full ~{full_span} px trail "
+        f"— the merge step is not load-bearing (a no-merge detector would land here)"
+    )
+    mx, my = result.midpoint
+    assert abs(mx - 315.0) < 5.0, f"midpoint x {mx:.1f} not near the trail center 315"
+    assert abs(my - 300.0) < 3.0, f"midpoint y {my:.1f} not near the trail center 300"
+
+
+# ---------------------------------------------------------------------------
+# Transverse refinement — the 1D-Gaussian normal-profile fit is load-bearing (NOT a 2D centroid,
+# NOT a no-op): it recovers a known sub-pixel transverse offset.
+# ---------------------------------------------------------------------------
+
+
+def test_transverse_refinement_recovers_subpixel_offset():
+    """_refine_midpoint_transverse shifts the midpoint along the streak NORMAL onto the true
+    sub-pixel transverse center. A no-op (return the geometric point) or a method that ignored the
+    profile would not recover a known 0.35 px offset.
+    """
+    H = W = 64
+    y_true = 31.35  # true transverse center of a horizontal ridge (angle 0 -> normal is vertical)
+    yy = np.arange(H)[:, None].astype(np.float64)
+    sub = (1000.0 * np.exp(-((yy - y_true) ** 2) / (2.0 * 1.5 ** 2))) * np.ones((1, W))
+    geom_mid = (32.0, 31.0)  # geometric midpoint, transversely off the true center by 0.35 px
+    rx, ry = _refine_midpoint_transverse(sub, geom_mid, angle_deg=0.0)
+    assert abs(ry - y_true) < 0.1, f"refined y {ry:.3f} did not recover true center {y_true}"
+    assert abs(ry - geom_mid[1]) > 0.2, "refinement was a no-op (did not move toward the true center)"
+    assert rx == pytest.approx(geom_mid[0], abs=1e-6), "longitudinal x must be unchanged (angle 0)"
