@@ -36,16 +36,35 @@ from astropy.io import fits
 from astropy.wcs import WCS
 
 # --- rendering constants (deterministic; documented so the brightness model is auditable) ------
-# Electrons collected from a magnitude-0 star over the exposure. The Gaia field here spans
-# G ~ 3.8 (very bright, deliberately clipped below saturation) to the G<14 limit; this zero-point
-# keeps the brightest stars well above read noise without driving the float image to absurd values.
-_FLUX_ZEROPOINT_E = 1.0e5
+# Electrons collected from a magnitude-0 star over the exposure. The Gaia field here spans G ~ 3.8
+# (very bright) to the G<14 limit. This zero-point must put a workable NUMBER of real stars clearly
+# above the noise floor (sky ~200 e + read 5 e + Poisson ~sqrt(200) ~14 e/px), because the BLIND
+# plate-solve (S3) builds its quad asterism from the brightest extracted sources and needs ~10-20
+# genuine stars standing above noise. An earlier value of 1.0e5 left only the single brightest star
+# clearly above noise (10th-brightest peaked ~11 e/px, ~1 sigma) — so the streak's bright fragments
+# outranked the few detectable stars and the blind solve did not converge (S3 AC 3.1, the empirical
+# gate). 1.0e6 puts the brightest ~tens of stars well above noise (brightest ~1400 e/px), so the
+# genuine asterism dominates the source list and the blind solve locks on (recovered-vs-true ~0.6"
+# at center). Still finite — no saturation modelling.
+_FLUX_ZEROPOINT_E = 1.0e6
 # Per-pixel sky background (electrons) — a flat diffuse floor so noise has something to act on and
 # the frame is not a pure-black field of point sources.
 _SKY_BACKGROUND_E = 200.0
-# Peak electrons deposited along the streak ridge. The satellite is a bright fast-mover; this is
-# the per-row peak BEFORE the transverse Gaussian falloff. Kept finite (no saturation modelling).
-_STREAK_PEAK_E = 8.0e3
+# Per-pixel peak electrons (above sky) ALONG the streak ridge — the EXACT value at the trail center,
+# rolling off transversely as a 1D Gaussian (see _render_streak; by construction the ridge peak ==
+# this constant — no longitudinal-overlap amplification). The satellite is a bright fast-mover, so
+# the trail sits at roughly the brightest-star level (brightest Gaia star here peaks ~1400 e/px above
+# sky at _FLUX_ZEROPOINT_E=1e6) — bright enough to be an unambiguous linear feature for S4's Hough
+# detector, but NOT orders of magnitude above the stars. The original render drove the ridge to
+# ~1.7e5 e/px (~hundreds x the brightest star, and the constant misdescribed it as 8e3); solve-field's
+# internal extractor (simplexy) then deblended the bright trail into ~a dozen collinear spurious point
+# sources that, outranking every real star, filled the brightest-object quad search and STARVED the
+# true-star asterism — the blind solve never converged (S3 AC 3.1, the empirical gate). Holding the
+# ridge in the bright-star regime keeps the streak fragments OUT of the top of the source list so the
+# blind plate-solve locks onto the real stars. (Mitigation #1 from the plan's Sprint-3 ladder; the
+# root cause was an unphysical dynamic range, fixed here together with the too-faint star zero-point,
+# so neither --downsample nor a pointing-hint nor ASTAP was needed.)
+_STREAK_PEAK_E = 1.5e3
 # Transverse 1-sigma width of the streak (pixels). A real trailed point source has the PSF width;
 # reuse the star PSF sigma at render time (see _render_streak).
 
@@ -178,10 +197,14 @@ def _render_stars(signal: np.ndarray, scene, catalogue, wcs: WCS) -> int:
 def _render_streak(signal: np.ndarray, scene, px: dict[str, tuple[float, float]]) -> None:
     """Draw an antialiased satellite streak from the start pixel to the end pixel.
 
-    A bright ridge with a 1D-Gaussian TRANSVERSE profile (sigma = ``scene.psf_sigma_px``), sampled
-    densely along the start->end segment so the trail is continuous and antialiased. The transverse
-    falloff is computed from the true perpendicular distance of each pixel to the line segment, so
-    the streak has a smooth sub-pixel edge (not a hard 1-px line).
+    The trail is a ridge of constant per-pixel peak ``_STREAK_PEAK_E`` (electrons, above sky) running
+    along the start->end segment, with a 1D-Gaussian TRANSVERSE profile (sigma = ``scene.psf_sigma_px``)
+    rolling off to either side. For every pixel in the streak's bounding region we compute its true
+    perpendicular distance to the segment (clamped at the endpoints) and deposit
+    ``_STREAK_PEAK_E * exp(-perp^2 / 2 sigma^2)`` ONCE — so the ridge peak is exactly ``_STREAK_PEAK_E``
+    by construction (no longitudinal-overlap amplification), the constant means what it says, and the
+    edge is smooth/sub-pixel. The streak peak is held in the same dynamic range as a bright star so
+    solve-field's internal source extractor (simplexy) is not dominated by it (see the constant note).
     """
     sigma = float(scene.psf_sigma_px)
     (x0, y0) = px["start"]
@@ -192,29 +215,28 @@ def _render_streak(signal: np.ndarray, scene, px: dict[str, tuple[float, float]]
     length = float(np.hypot(dx, dy))
     if length == 0.0:
         return
-    # Unit vector along the streak.
-    ux, uy = dx / length, dy / length
+    ux, uy = dx / length, dy / length  # unit vector along the streak
     half = int(np.ceil(5.0 * sigma))
     inv_two_sig2 = 1.0 / (2.0 * sigma * sigma)
 
-    # Sample the segment at sub-pixel steps; for each sample paint a transverse Gaussian into the
-    # local stamp using the true point-to-line perpendicular distance (deterministic, antialiased).
-    n_steps = int(np.ceil(length)) * 2 + 1
-    ts = np.linspace(0.0, length, n_steps)
-    # Per-sample amplitude so the integrated per-unit-length deposit is ~constant along the ridge.
-    amp = _STREAK_PEAK_E / (n_steps / max(length, 1.0))
-    for s in ts:
-        cx = x0 + ux * s
-        cy = y0 + uy * s
-        ix, iy = int(round(cx)), int(round(cy))
-        xa, xb = max(0, ix - half), min(w, ix + half + 1)
-        ya, yb = max(0, iy - half), min(h, iy + half + 1)
-        if xb <= xa or yb <= ya:
-            continue
-        ys, xs = np.mgrid[ya:yb, xa:xb]
-        # perpendicular distance from each pixel to the line through (cx,cy) with direction (ux,uy)
-        perp = (xs - cx) * (-uy) + (ys - cy) * ux
-        signal[ya:yb, xa:xb] += amp * np.exp(-(perp * perp) * inv_two_sig2)
+    # Bounding box of the segment, padded by the transverse PSF reach, clipped to the frame.
+    xlo = max(0, int(np.floor(min(x0, x1))) - half)
+    xhi = min(w, int(np.ceil(max(x0, x1))) + half + 1)
+    ylo = max(0, int(np.floor(min(y0, y1))) - half)
+    yhi = min(h, int(np.ceil(max(y0, y1))) + half + 1)
+    if xhi <= xlo or yhi <= ylo:
+        return
+
+    ys, xs = np.mgrid[ylo:yhi, xlo:xhi]
+    # Project each pixel onto the segment: t = ((p-p0).u) clamped to [0, length]; the perpendicular
+    # distance to the (clamped) segment then gives a true sub-pixel transverse falloff with rounded
+    # ends, and the ridge along the segment sits at exactly _STREAK_PEAK_E.
+    rx, ry = xs - x0, ys - y0
+    t = np.clip(rx * ux + ry * uy, 0.0, length)
+    perp_x = rx - t * ux
+    perp_y = ry - t * uy
+    perp2 = perp_x * perp_x + perp_y * perp_y
+    signal[ylo:yhi, xlo:xhi] += _STREAK_PEAK_E * np.exp(-perp2 * inv_two_sig2)
 
 
 def _build_signal(scene, catalogue, tle, wcs: WCS):
