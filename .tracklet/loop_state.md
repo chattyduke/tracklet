@@ -2,8 +2,8 @@
 current_milestone: M0
 current_increment: "S4 detect_streak (Canny+Hough -> midpoint)"
 last_increment_id: "S3 solve_pointing (blind plate-solve)"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: a4663ab2cd2ed4d2113455909d9b8c1ade63d80b
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 62, failed: 0}
@@ -13,34 +13,31 @@ plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []  # S3 review (mandatory 2nd pass) ACCEPT_WITH_NOTES @ tick 9; 1 MINOR (malformed scale_hint raises KeyError, not SolveFailure) rejected-for-S3 + CARRIED as an S6 run.py watch-item (see post-S3 note)
 next_action: >-
-  S4 (Sprint 4: detect_streak — Canny+Hough -> streak midpoint) is the next rung. Next tick opens FRESH ->
-  GENBA -> RESEARCH (SKIP — pure CV construction over the rendered frame; no external unknown; cv2 installed at
-  S0) -> IDEATE (BRIEF design brief: detect_streak(image_path) -> StreakDetection|DetectFailure; sigma-clip
-  background subtract -> cv2.Canny -> cv2.HoughLinesP -> cluster/merge collinear fragments into ONE streak ->
-  measured point = merged-line MIDPOINT (matches the exposure-midpoint scored truth), refined transversely by a
-  1D-GAUSSIAN fit to the PERPENDICULAR intensity profile (photutils.centroid_1dg or scipy curve_fit — NOT a 2D
-  centroid, which is wrong for an elongated feature); DetectFailure if none; reads NO truth, signature
-  image_path ONLY) -> PLAN (JIT shortcut: Sprint 4 ACs 4.1-4.4, same plan_sha256; lock + end at ExitPlanMode).
-  S4 is NOT high-risk in the seal/WCS sense (detect reads no truth, no WCS/plate-solve math, not a milestone) ->
-  a standard single local review unless the diff is >~300 LOC / >8 files. The streak now renders ~90σ above the
-  noise floor (S3 mitigation) so it is cleanly detectable; AC 4.1 asserts the detected midpoint is within N px of
-  the truth streak midpoint (test reads truth). Use ~/tracklet/.venv/bin/python.
+  BUILD S4 (Sprint 4: detect_streak — Canny+Hough -> streak midpoint) — the locked design brief is at the bottom
+  of this file (tick 10). Cut feat/S4 off main. Implement src/tracklet/detect_streak.py
+  detect_streak(image_path) -> StreakDetection|DetectFailure via /tdd-harness or a spawned Generator: load
+  image.fits -> sigma-clip bg subtract -> cv2.Canny -> cv2.HoughLinesP -> merge collinear fragments into ONE
+  streak -> midpoint of the merged line, refined transversely by a 1D-GAUSSIAN fit to the PERPENDICULAR profile
+  (NOT a 2D centroid); DetectFailure (not exception) if none; reads NO truth, signature image_path ONLY.
+  Non-solver ACs 4.1-4.4 (all run with ~/tracklet/.venv/bin/python): 4.1 detected midpoint within N px of the
+  truth streak midpoint (render golden frame, read truth.json satellite_px mid); 4.2 merges fragments to ONE
+  streak; 4.3 DetectFailure on a star-only/streak-absent frame; 4.4 signature has no truth path. The streak now
+  renders ~90sigma above noise (S3 mitigation) so it is cleanly detectable. S4 is NOT @solver + NOT high-risk
+  (no truth, no WCS math, not a milestone) -> a single thorough local review (PHASE 5) unless the diff is
+  >~300 LOC / >8 files; do NOT touch render.py. Merge feat/S4 -> main on green + all findings dispositioned.
 human_gate: false
 tick_lock: null
 
-# --- post-S3 note (read before the next PLAN/BUILD tick) ---
-# S3 (solve_pointing) merged GREEN at last_green_sha a4663ab (--no-ff). The PROJECT'S CORE RISK IS RETIRED: a
-# REAL blind solve-field (no RA/Dec seed) on the rendered golden streaked frame recovers the WCS to ~2.0 arcsec
-# (worst over center+corners; tol 10) vs the sealed truth — independently re-run by the mandatory 2nd reviewer
-# (a 0.3deg-off solve = 813", a flipped-CD = 10233", so 10" cannot hide a mis-solve). Empirical gate fired:
-# render Mitigation #1 applied (controlled streak ridge, _STREAK_PEAK_E capped 8e3->1500 NOW HONEST = exact
-# rendered peak, _FLUX_ZEROPOINT_E 1e5->1e6) — this ALSO fixed a latent S2 near-noise-floor star defect; seal
-# re-verified (image.fits WCS-free, render sole truth writer) + all S2 ACs still green. main HEAD after this tick
-# is the bookkeeping commit one past a4663ab — expected, NOT a §3.5 anomaly. The @solver suite (pytest -m solver)
-# now has 2 real tests + must stay green at every later @solver-touching tick. CARRIED S6 WATCH-ITEM: solve_pointing
-# raises KeyError (not SolveFailure) on a malformed scale_hint — when S6's run.py wires real callers, make that
-# path return a typed SolveFailure (or validate the hint at the run.py boundary) so honest-failure is airtight.
-# NEXT rung S4 (detect_streak — CV, NOT @solver, NOT high-risk). venv ~/tracklet/.venv (Python 3.14.4).
+# --- post-S4-plan note (read before the S4 BUILD tick's §3.5 gate) ---
+# S4 plan LOCKED this tick (FRESH -> PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan (SHA
+# unchanged). main HEAD is now the S4 plan-lock commit, loop-authored commits past last_green_sha a4663ab (S3) —
+# expected, NOT a §3.5 anomaly. S4 BUILD tick: assert tree clean + only loop-authored commits since a4663ab, then
+# cut feat/S4 off main. S4 is detect_streak (CV): NOT @solver, NOT high-risk (reads no truth, no WCS math, not a
+# milestone) -> a single thorough local PHASE-5 review unless the diff is large; do NOT touch render.py.
+# Pipeline status: render (S2) + solve_pointing (S3) proven; the rendered streak is ~90sigma above noise so S4
+# detection is well-posed. CARRIED S6 WATCH-ITEM (still open): solve_pointing raises KeyError (not SolveFailure)
+# on a malformed scale_hint — address when S6's run.py wires real callers. @solver suite (2 tests) must stay green.
+# venv ~/tracklet/.venv (Python 3.14.4); cv2/scikit-image/photutils/scipy installed at S0.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -296,3 +293,48 @@ no truth (signature image+hint only), blind solve (no pointing seed); (c) signed
 - [tick 9 | REVIEW] Thought: S3 HIGH-RISK (WCS/plate-solve + @solver + render.py — the keystone — was modified) → MANDATORY 2nd independent LOCAL review that re-renders/re-solves/re-verifies the seal + S2 ACs. → Action(spawn general-purpose reviewer over git diff main..feat/S3) → Observation: VERDICT ACCEPT_WITH_NOTES. Reviewer INDEPENDENTLY re-rendered + blind-solved (2.03" worst, no seed; probed 0.3°-off=813", flipped-CD=10233" → 10" cannot hide a mis-solve); seal survived (raw-header WCS-free, render sole writer); ALL S2 ACs still green incl. determinism (3 renders identical hash) + the midpoint convention (delta 0.06/0.10px = real ISS non-linear motion); _STREAK_PEAK_E now EXACTLY 1500 (measured); streak ~90σ above noise (S4-detectable); 25/30 stars >5σ. 1 MINOR: malformed scale_hint raises KeyError not SolveFailure → REJECTED for S3 (out of contract, no AC) + CARRIED as an S6 run.py watch-item. Non-circularity holds.
 - [tick 9 | INTEGRATE] Thought: gate passed (ACCEPT_WITH_NOTES + MINOR dispositioned + both suites green) → integrate. → Action(merge --no-ff feat/S3→main; pytest non-solver + solver; delete feat/S3) → Observation: merged @ a4663ab; 62 non-solver + 2 @solver green on main; branch deleted. S3 ≠ a milestone → no tag. no_progress_count stays 0 (green increment landed).
 - [tick 9 | HANSEI] What worked: the EMPIRICAL @solver GATE (AC 3.1) did EXACTLY its job — it surfaced a real, non-obvious physical-realism defect (the render dynamic range was unphysical: a ~170k-e streak + near-noise-floor stars) that NO non-solver test could have caught, because only a REAL blind solve exercises solve-field's own source extraction. The project's CORE technical risk (does the synthetic-from-real-data pipeline actually plate-solve?) is now RETIRED at ~2 arcsec. The render mitigation also fixed a latent S2 brightness defect — a Konnyaku-Stone smoothing of an earlier panel, surfaced by stacking the next one on top. Muda avoided: the Generator went straight to the gated mitigation ladder (no flailing). KAIZEN: (1) S6 — solve_pointing must return SolveFailure (not raise) on a malformed scale_hint when run.py wires real callers (carried, post-S3 note). (2) render.py is now touched by BOTH S2 and S3 — it is stable + sealed, but ANY further render change must re-verify the seal + re-run determinism. Anti-spin: green merge → no_progress reset to 0.
+
+- [tick 10 | GENBA] Thought: status FRESH, next rung S4; the harness flagged S2/S3 files "modified" → CRITICAL to confirm the tree is clean (committed work, not drift) before planning. → Action(Read state; Read plan Sprint 4; git status --porcelain + HEAD + commits since a4663ab; plan SHA; baseline) → Observation: porcelain EMPTY (tree CLEAN — the "modified" notes are the committed S2/S3 work, NOT uncommitted drift; no Andon), HEAD aa786d7, only the S3 bookkeeping commit since a4663ab, no feat/* branches, plan SHA matches d7237cdd…, baseline 62/62 green. Sprint 4 re-grounded.
+- [tick 10 | RESEARCH] Thought: S4 is pure CV over the rendered frame; cv2/scikit-image/photutils/scipy installed at S0; no dataset/API/algorithm unknown (the plan names the exact ops). → Action(none — JIT SKIP) → Observation: research SKIPPED (mechanical CV; S4 settled by the plan + installed libs).
+- [tick 10 | IDEATE] Thought: detect_streak is fully specified (Sprint 4) but has real CV content (Canny/Hough params, fragment merge, 1D-Gaussian transverse fit) → a BRIEF design brief pinning the contract + the transverse-fit invariant, not a full brainstorm. → Action(emit BRIEF design brief, below) → Observation: brief recorded; Pre-Mortem clear (implements stub; reads no truth, image only; contract signature preserved; scope == Sprint 4; 1D-Gaussian-NOT-2D-centroid is the load-bearing correctness point).
+- [tick 10 | PLAN] Thought: JIT shortcut — S4 fully covered by the approved plan (Sprint 4, ACs 4.1-4.4); skip /ultraplan, consume it, keep plan_sha256. → Action(set status PLAN_LOCKED_AWAITING_BUILD; keep plan_file/SHA; write S4 BUILD next_action) → Observation: status PLAN_LOCKED_AWAITING_BUILD; plan_sha256 unchanged d7237cdd…; per §3.2 the FRESH tick HARD-STOPS here — the S4 BUILD is the next tick. no_progress stays 0 (plan-lock = progress).
+
+### increment design brief (tick 10)
+
+```
+S4 — detect_streak (Canny+Hough -> streak midpoint). Build EXACTLY Sprint 4 of the approved plan (ACs 4.1-4.4).
+detect_streak is a CV module — NOT @solver, reads NO truth, no WCS math, NOT a milestone.
+
+CHOSEN APPROACH: implement detect_streak(image_path) -> StreakDetection | DetectFailure on the stub. Pipeline:
+load image.fits -> sigma-clip background subtract (e.g. astropy sigma_clipped_stats) -> cv2.Canny edge detect ->
+cv2.HoughLinesP -> cluster/merge COLLINEAR fragments into ONE streak (the ISS trail is a single long line; Hough
+returns multiple segments along it — merge by angle + perpendicular-offset proximity) -> measured point =
+MIDPOINT of the merged line (matches the exposure-midpoint scored truth) -> refine the midpoint TRANSVERSELY by a
+1D-GAUSSIAN fit to the PERPENDICULAR intensity profile (sample the image along the streak normal at the midpoint,
+fit a 1D Gaussian, take its center for sub-pixel transverse position; photutils.centroids.centroid_1dg or
+scipy.optimize.curve_fit — NOT a 2D centroid, which is WRONG for an elongated feature). Return DetectFailure
+(typed, NOT exception) if no streak is found.
+
+TOUCHED MODULES: src/tracklet/detect_streak.py (implement stub) + tests/test_detect_streak.py (new). render.py
+NOT touched — reuse render_scene's rendered frame as the test input (the streak now ~90sigma above noise after
+the S3 mitigation, so it is cleanly detectable). scene/solve_pointing/measure_position/score/report/run UNTOUCHED.
+
+DATA FLOW: image.fits (the delivered composited frame WITH the streak) -> detect_streak -> StreakDetection
+(merged endpoints + midpoint pixel). The midpoint PIXEL feeds measure_position (S5), which turns it into RA/Dec
+via the recovered WCS. detect_streak reads NO truth (signature image_path only).
+
+TEST ORACLE (ACs 4.1-4.4, all NON-solver — pure CV on the rendered frame):
+  4.1 detected midpoint within N px of the TRUTH streak midpoint (test renders the golden frame, runs detect,
+      reads truth.json's satellite_px midpoint, asserts |detected - truth_mid| < N px; the test MAY read truth).
+  4.2 merges collinear Hough fragments into a SINGLE streak (assert one merged streak, not N raw segments).
+  4.3 DetectFailure RETURNED (not raised) on a star-only / streak-absent frame (build a stars+noise fixture with
+      no satellite trail — e.g. a render variant or a synthetic stars-only array — assert DetectFailure).
+  4.4 signature takes only image_path (no truth path; structural/inspect check).
+
+YAGNI / OUT OF SCOPE: NO measure/score (S5 — detect outputs a PIXEL midpoint only), NO report (S6), NO solving.
+detect_streak does CV only.
+
+JUDGE: N/A — brief design brief (Sprint 4 fully specified; no design fork). Pre-Mortem guard manual, all clear:
+(a) implements the detect_streak stub (re-invents nothing); (b) sealed-truth preserved — detect reads no truth,
+takes image only; (c) signed contract signature preserved (detect_streak(image_path)); (d) scope == Sprint 4.
+```
