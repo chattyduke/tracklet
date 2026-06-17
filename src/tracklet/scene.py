@@ -151,7 +151,12 @@ def parse_tle_text(text: str) -> TLE:
     Accepts the CelesTrak 3-line form (name + line1 + line2) or a bare 2-line form. This is the
     shared validator used by both the offline loader and fetch_fixtures' fetch-time validation.
     """
-    lines = [ln.rstrip("\r\n") for ln in text.splitlines() if ln.strip()]
+    # Drop blank lines and provenance comment lines ('#') — the snapshot stamps a '# ...' header.
+    lines = [
+        ln.rstrip("\r\n")
+        for ln in text.splitlines()
+        if ln.strip() and not ln.lstrip().startswith("#")
+    ]
     if not lines:
         raise ValueError("TLE is empty")
     # Reject the HTML error page CelesTrak returns on a bad CATNR / rate-limit.
@@ -191,7 +196,7 @@ def load_catalogue(path: str):
     """
     from astropy.io import ascii as ascii_io  # local import: keep scene import light
 
-    return ascii_io.read(path, format="csv", comment=r"\s*#")
+    return ascii_io.read(Path(path).read_text().splitlines(), format="csv", comment=r"\s*#")
 
 
 def default_tle_path(scene: SceneConfig) -> str:
