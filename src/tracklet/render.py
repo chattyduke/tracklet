@@ -334,7 +334,12 @@ def render_scene(scene, catalogue, tle, out_dir) -> RenderResult:
     hdu.writeto(image_path, overwrite=True)
 
     # --- write truth.json SEALED: render is the SOLE writer -------------------------------------
-    truth = _build_truth(scene, wcs, radec, px, catalogue_ref=str(default_catalogue_ref(scene)))
+    # Stamp the catalogue by its committed fixture FILENAME (not an absolute path) so truth.json
+    # stays portable / machine-independent.
+    from tracklet.scene import default_catalogue_path
+
+    catalogue_ref = Path(default_catalogue_path(scene)).name
+    truth = _build_truth(scene, wcs, radec, px, catalogue_ref=catalogue_ref)
     truth["n_stars_in_frame"] = int(n_stars)
     truth_path = out_dir / "truth.json"
     truth_path.write_text(json.dumps(truth, indent=2, sort_keys=True))
@@ -342,10 +347,3 @@ def render_scene(scene, catalogue, tle, out_dir) -> RenderResult:
     return RenderResult(
         image=image, wcs=wcs, truth=truth, image_path=image_path, truth_path=truth_path
     )
-
-
-def default_catalogue_ref(scene) -> str:
-    """The catalogue reference stamped into truth.json (the committed Gaia fixture path)."""
-    from tracklet.scene import default_catalogue_path
-
-    return default_catalogue_path(scene)

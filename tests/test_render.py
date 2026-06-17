@@ -173,6 +173,11 @@ def test_image_fits_has_no_wcs_keywords(scene, catalogue, tle, tmp_path):
         for kw in _WCS_KEYWORDS:
             offenders = [k for k in keys if k.upper().startswith(kw)]
             assert not offenders, f"image.fits leaked WCS keyword(s) {offenders} (prefix {kw})"
+        # Belt-and-braces: no WCS keyword card may appear ANYWHERE in the raw header text either
+        # (catches a keyword smuggled into a COMMENT/HISTORY card). This is the load-bearing seal.
+        raw = header.tostring().upper()
+        for kw in _WCS_KEYWORDS:
+            assert kw not in raw, f"image.fits raw header contains WCS token {kw!r}"
 
 
 def test_image_fits_data_matches_rendered_array(scene, catalogue, tle, tmp_path):
