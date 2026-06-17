@@ -20,8 +20,8 @@ elev_m = 10.0
 width_px = 2048
 height_px = 2048
 pixel_scale_arcsec = 5.0    # ~2.8 deg field across 2048 px (W * scale ~= FOV)
-center_ra_deg = 0.0         # placeholder; S1 sets the pointing from the scene geometry
-center_dec_deg = 0.0
+center_ra_deg = 35.527547         # resolved by fetch_fixtures from the ISS TLE geometry
+center_dec_deg = 26.547775
 fov_deg = 2.844             # 2048 * 5.0 / 3600
 
 [noise]
