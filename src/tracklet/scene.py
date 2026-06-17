@@ -201,7 +201,7 @@ def load_catalogue(path: str):
 
 def default_tle_path(scene: SceneConfig) -> str:
     """Resolve the committed TLE fixture for this scene's satellite (newest snapshot wins)."""
-    cands = sorted((_DATA / "tle").glob(f"iss_*.txt")) if scene.catnr == 25544 else []
+    cands = sorted((_DATA / "tle").glob("iss_*.txt")) if scene.catnr == 25544 else []
     if not cands:
         cands = sorted((_DATA / "tle").glob("*.txt"))
     if not cands:
