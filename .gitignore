@@ -1,0 +1,17 @@
+# tracklet — generated / environment artifacts (never committed)
+.venv/
+out/
+indexes/
+*.fits
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+
+# NOTE: .tracklet/ IS tracked — it holds loop_state.md, the build loop's only memory.
