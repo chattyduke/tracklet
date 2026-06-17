@@ -2,8 +2,8 @@
 current_milestone: M0
 current_increment: "S1 scene + frozen real-data fixtures"
 last_increment_id: "S0 environment + plate-solver gate"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: f87fc9bc6cab4efedbb47bc2285f8173f9ae4944
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 5, failed: 0}
@@ -13,21 +13,28 @@ plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []
 next_action: >-
-  S1 (Sprint 1: scene + frozen real-data fixtures) is the next rung. Next tick opens FRESH ->
-  GENBA -> RESEARCH (ABBREVIATE: confirm CelesTrak gp.php + Gaia TAP reachable; Gaia needs the
-  certifi CA fix — reuse the pattern in scripts/_smoke_solve.py) -> IDEATE (SKIP, S1 fully specified
-  in the plan) -> PLAN (JIT shortcut: consume the approved plan, same SHA) -> end
-  PLAN_LOCKED_AWAITING_BUILD.
+  BUILD S1 (Sprint 1 of the approved plan: scene + frozen real-data fixtures) via /tdd-harness
+  (now that S0 created the test runner, the harness CAN preflight; use ~/tracklet/.venv/bin/python).
+  Cut feat/S1 off main. Scope: implement src/tracklet/scene.py (SceneConfig frozen dataclass +
+  build_scene loader from config/default_scene.toml + validation Poka-Yoke W*pixel_scale≈FOV, positive
+  dims, sane mag limit) and scripts/fetch_fixtures.py (CelesTrak TLE + Gaia DR3 ADQL cone with
+  Gaia.ROW_LIMIT=-1, provenance-stamped, idempotent, fetch-validation rejecting bad TLE / truncated or
+  empty Gaia), then run fetch ONCE and COMMIT the frozen fixtures under data/. REUSE the certifi-CA +
+  Gaia retry pattern from scripts/_smoke_solve.py from the START. See the tick-3 design brief below.
+  ACs 1.1-1.3 are the contract. Sealed-truth untouched (scene defines the scene; fetch writes fixtures,
+  not truth).
 human_gate: false
 tick_lock: null
 
-# --- post-S0 note (read before the next BUILD tick's §3.5 gate) ---
-# S0 merged GREEN at last_green_sha f87fc9b (`git log` shows the --no-ff merge). main HEAD after
-# this tick is the bookkeeping commit ONE PAST f87fc9b — this is the expected post-integration
-# state, NOT a §3.5 anomaly (a FRESH planning tick does not build, so no HEAD==last_green_sha gate
-# fires this tick). The S1 BUILD tick will branch feat/S1 off main's then-HEAD and record its own
-# expected post-plan commit. Out-of-repo S0 footprint (per README): brew astrometry-net, ~335MB in
-# ~/tracklet/indexes (gitignored), and one add_path line in /opt/homebrew/etc/astrometry.cfg.
+# --- post-S1-plan note (read before the S1 BUILD tick's §3.5 gate) ---
+# S0 is green at last_green_sha f87fc9b. main HEAD is now the S1 plan-lock commit (this tick), a few
+# commits past f87fc9b (S0 bookkeeping + this plan-lock) — ALL loop-authored, tree clean: the expected
+# post-plan state, NOT a §3.5 anomaly. S1 BUILD tick gate: assert tree clean AND the only commits since
+# f87fc9b are the loop's own bookkeeping/plan-lock (no foreign edits), then branch feat/S1 off main HEAD.
+# anti-spin (§3.3): this plan-lock tick is PROGRESS (locked a plan) -> no_progress_count stays 0 (the
+# guard counts CONSECUTIVE no-progress ticks; a plan-lock is not one).
+# S1 fetches LIVE data once (CelesTrak + Gaia, both HTTP 200 this tick) then commits frozen fixtures so
+# the run/test path stays OFFLINE (the plan's single biggest hardening). Gaia needs certifi CA + retry.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -94,3 +101,59 @@ brainstorm→judge panel here would be Muda). Pre-Mortem guard checked manually,
 - [tick 2 | REVIEW] Thought: large diff (>8 files) → fresh-context adversarial LOCAL review (no cloud, §6). → Action(spawn general-purpose reviewer over `git diff main..feat/S0`) → Observation: VERDICT ACCEPT_WITH_NOTES; sealed-truth provably preserved, guard non-tautologically tested (reviewer neutered the guard → test failed), install_indexes.sh fail-closed verified. Dispositioned — FIXED: pythonpath=[src] (verified bare pytest 5/5 with tracklet uninstalled), requires-python >=3.14,<3.15, smoke offset-gate <60", smoke TemporaryDirectory cleanup + Gaia retry-resilience; REJECTED w/ rationale: committed tick_lock (loop's required memory; cleared this tick) + cfg-write NIT (set -e already fails loud). Re-smoke PASS @14.2". Fix commit 46c6d33.
 - [tick 2 | INTEGRATE] Thought: PHASE-5 gate met (every finding dispositioned + non-solver suite green + smoke green) → integrate. → Action(git merge --no-ff feat/S0 → main; pytest; delete feat/S0) → Observation: merged @ f87fc9b (S0 green here); 5/5 green on main; branch deleted. S0 ≠ a milestone (M0 needs S0–S7) → no tag.
 - [tick 2 | HANSEI] What worked: backgrounding the long poles (venv install + 340MB index fetch) while scaffolding in parallel kept the tick flowing; genchi-genbutsu probes (Cellar-empty check, `--config`-only re-solve, the SSL diagnosis) each caught a real trap before it bit (spurious-pass risk; env-SSL). py3.14 carried every cp314 wheel → no 3.12 fallback. Surprises/Muda: (1) /tdd-harness cannot preflight the increment that creates its own test runner — S0 is inherently pre-harness; (2) python.org stdlib ssl ships no CA bundle → Gaia TLS failed until pointed at certifi; (3) the Gaia archive is flaky (one ConnectionReset) → added retry. KAIZEN for next tick: S1's fetch_fixtures hits the SAME Gaia SSL + flakiness — reuse the certifi-CA + retry pattern from scripts/_smoke_solve.py from the start rather than rediscovering it. Loop-doc kaizen: S0 builds via direct TDD (not /tdd-harness); the harness applies from S1 onward once a test runner exists.
+
+- [tick 3 | GENBA] Thought: scheduled wakeup; state=FRESH, next rung S1; verify §3.5 + plan unchanged + S1's external archives before planning. → Action(Read state; git status/log/HEAD; re-hash plan; curl CelesTrak gp.php + Gaia TAP) → Observation: clean tree @ f8ac53e (expected post-S0 bookkeeping commit), plan SHA matches d7237cdd…, no_progress 0, tick_lock null; CelesTrak 200 + Gaia TAP 200. Perth 11:46.
+- [tick 3 | RESEARCH] Thought: S1 (scene + frozen fixtures) carries no genuine technical unknown — the plan (Sprint 1) settles the SceneConfig shape, the Gaia ADQL (ROW_LIMIT=-1, mag<14), and the fetch-validation Poka-Yokes; only external FACTS to confirm are CelesTrak + Gaia reachability → ABBREVIATE, not /deep-research. → Action(1-call reachability confirm, above) → Observation: both archives HTTP 200; no new external dependency introduced. Carried kaizen: Gaia needs certifi-CA + retry (from tick-2 _smoke_solve.py). research: ABBREVIATED (reachability confirmed, JIT).
+- [tick 3 | IDEATE] Thought: S1 is fully specified in the plan (Sprint 1, ACs 1.1-1.3) with an obvious module shape (scene.py + fetch_fixtures.py); heavy ideation would be Muda. SKIP. → Action(emit trivial design brief, below) → Observation: brief recorded; Pre-Mortem guard clear — scene DEFINES the scene (reads no truth), fetch writes fixtures (not truth.json); render/solve/detect/measure/score contracts untouched (S1 implements neither); no speculative scope.
+- [tick 3 | PLAN] Thought: JIT shortcut — S1 fully covered by the approved plan; skip /ultraplan, consume it, keep plan_sha256. → Action(set status PLAN_LOCKED_AWAITING_BUILD; keep plan_file/SHA; update next_action to the S1 BUILD contract) → Observation: status PLAN_LOCKED_AWAITING_BUILD; plan_sha256 unchanged d7237cdd…; per §3.2 the FRESH tick HARD-STOPS here — the S1 BUILD is the next tick. no_progress_count stays 0 (plan-lock = progress, §3.3).
+
+### increment design brief (tick 3)
+
+```
+S1 — scene + frozen real-data fixtures. Build EXACTLY Sprint 1 of the approved plan
+(lucky-dazzling-parasol.md, "Sprint 1", ACs 1.1-1.3). The S1 BUILD tick runs /tdd-harness with the
+plan as contract (S0 created the test runner, so the harness can now preflight).
+
+SCOPE (JIT — Sprint 1 verbatim):
+  - src/tracklet/scene.py: `SceneConfig` frozen dataclass + `build_scene(config_path) -> SceneConfig`
+    loading config/default_scene.toml. Validation Poka-Yoke (fail-closed): assert W*pixel_scale ≈ FOV
+    (consistency), positive dims, sane mag limit. Pure; reads NO truth (it DEFINES the scene).
+  - scripts/fetch_fixtures.py: run-once-then-offline. CelesTrak gp.php?CATNR=25544&FORMAT=tle ->
+    data/tle/iss_<date>.txt; Gaia DR3 launch_job_async ADQL cone (EXPLICIT table gaiadr3.gaia_source,
+    SELECT ra,dec,phot_g_mean_mag, CONTAINS(...CIRCLE(ra0,dec0,radius)), phot_g_mean_mag<14, with
+    Gaia.ROW_LIMIT=-1 so the star field is NOT silently truncated) -> data/catalogue/gaia_<center>.csv.
+    Idempotent; stamps source URL + query + UTC fetch time. REUSE certifi-CA + retry-with-backoff from
+    scripts/_smoke_solve.py.
+  - Fetch-validation Poka-Yoke (fixtures are the foundation of every downstream test — reject garbage
+    BEFORE committing): TLE parses as two 69-char lines with valid checksums (reject HTML error pages
+    CelesTrak returns on bad CATNR/rate-limit); Gaia CSV non-empty, expected columns, plausible star
+    count (> a few hundred for a 2.8deg field at mag<14). Bad TLE / truncated|empty Gaia -> hard error,
+    NO snapshot written.
+  - Run fetch ONCE and COMMIT the frozen TLE + Gaia CSV under data/ (small, public/open: Gaia DR3 +
+    CelesTrak). The run/test path is then fully OFFLINE against committed fixtures.
+
+TOUCHED MODULES: src/tracklet/scene.py (implement stub) + scripts/fetch_fixtures.py (implement stub) +
+data/ (new frozen fixtures) + tests/test_scene.py (+ a fetch-validation test fed malformed TLE/empty
+CSV). render/solve_pointing/detect_streak/measure_position/score/report/run stubs UNTOUCHED.
+
+DATA FLOW: config/default_scene.toml -> build_scene -> SceneConfig (consumed later by render in S2).
+fetch_fixtures (online, once) -> data/{tle,catalogue} (frozen, committed) -> loaded offline downstream.
+
+SEALED-TRUTH: preserved by construction. scene defines scene params (no truth read). fetch_fixtures
+writes catalogue/TLE fixtures, NOT truth.json (truth is written only by render in S2, read only by
+score in S5). No solving module touched.
+
+TEST ORACLE (AC 1.1-1.3, all offline against committed fixtures / fed fakes):
+  1.1 SceneConfig deterministic + validation REJECTS inconsistent FOV/pixel-scale/dims (test feeds a bad
+      config, expects a raise).
+  1.2 frozen TLE + Gaia CSV load OFFLINE (test loads committed fixtures, no network).
+  1.3 fetch_fixtures idempotent + provenance-stamped + validates output (test feeds malformed TLE /
+      empty CSV -> hard error, no snapshot). `pytest -m "not solver"` stays green.
+
+YAGNI / OUT OF SCOPE: NO rendering, NO WCS, NO PSF/noise (all S2); NO solving/detection/scoring; NO
+network in the run/test path (only fetch_fixtures touches the network, and only when run explicitly).
+
+JUDGE SCORE TABLE: N/A — heavy ideation SKIPPED (S1 fully specified, no fork). Pre-Mortem guard manual,
+all four clear: (a) re-invents nothing (scene/fetch are empty stubs); (b) sealed-truth untouched;
+(c) shatters no signed contract; (d) scope == Sprint 1 verbatim.
+```
