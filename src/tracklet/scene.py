@@ -200,7 +200,12 @@ def load_catalogue(path: str):
 
 
 def default_tle_path(scene: SceneConfig) -> str:
-    """Resolve the committed TLE fixture for this scene's satellite (newest snapshot wins)."""
+    """Resolve the committed TLE fixture for this scene's satellite.
+
+    fetch_fixtures keeps exactly ONE committed TLE (it replaces older snapshots on write), so there
+    is normally a single candidate. If more than one is present (e.g. a stray file), prefer the
+    newest by snapshot date so the resolution is deterministic.
+    """
     cands = sorted((_DATA / "tle").glob("iss_*.txt")) if scene.catnr == 25544 else []
     if not cands:
         cands = sorted((_DATA / "tle").glob("*.txt"))
@@ -209,11 +214,40 @@ def default_tle_path(scene: SceneConfig) -> str:
     return str(cands[-1])
 
 
+def _catalogue_center_from_name(path: Path) -> tuple[float, float] | None:
+    """Parse the (ra, dec) center a `gaia_ra<RA>_dec<DEC>.csv` fixture name encodes ('m' = '-')."""
+    import re
+
+    m = re.match(r"gaia_ra([0-9.]+)_dec(m?[0-9.]+)\.csv$", path.name)
+    if not m:
+        return None
+    ra = float(m.group(1))
+    dec_tok = m.group(2)
+    dec = -float(dec_tok[1:]) if dec_tok.startswith("m") else float(dec_tok)
+    return ra, dec
+
+
 def default_catalogue_path(scene: SceneConfig) -> str:
-    """Resolve the committed Gaia CSV fixture for this scene (newest snapshot wins)."""
+    """Resolve the committed Gaia CSV fixture whose center MATCHES the scene config.
+
+    fetch_fixtures keeps exactly ONE committed catalogue (it replaces older snapshots on write).
+    To be robust if more than one is present, pick the fixture whose name-encoded center is closest
+    to the config center (deterministic) rather than a lexicographic `sorted()[-1]` (which could
+    silently mismatch the pointing).
+    """
     cands = sorted((_DATA / "catalogue").glob("gaia_*.csv"))
     if not cands:
         cands = sorted((_DATA / "catalogue").glob("*.csv"))
     if not cands:
         raise FileNotFoundError(f"no committed Gaia CSV fixture under {_DATA / 'catalogue'}")
-    return str(cands[-1])
+    if len(cands) == 1:
+        return str(cands[0])
+
+    def _dist(p: Path) -> float:
+        center = _catalogue_center_from_name(p)
+        if center is None:
+            return float("inf")
+        ra, dec = center
+        return (ra - scene.center_ra_deg) ** 2 + (dec - scene.center_dec_deg) ** 2
+
+    return str(min(cands, key=_dist))

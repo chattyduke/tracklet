@@ -51,10 +51,19 @@ TLE_DIR = _REPO / "data" / "tle"
 CAT_DIR = _REPO / "data" / "catalogue"
 
 CELESTRAK_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR={catnr}&FORMAT=tle"
-# Cone radius: half the field diagonal (~2.0 deg for the 2.844 deg field) plus margin.
-CONE_RADIUS_DEG = 1.6
+# Cone radius MUST cover the field half-diagonal so no frame CORNER is starless. The field is
+# square (W*pixel_scale/3600 ~= 2.844 deg per side), so the half-diagonal is sqrt(2)*fov/2 ~=
+# 2.011 deg. 2.1 deg adds a small margin (projection/edge slop) on top of that. A radius < the
+# half-diagonal would leave the four corners outside the cone -> starless corners (review F3).
+CONE_RADIUS_DEG = 2.1
 # Plausible-field floor: a 2.8 deg cone at mag<14 has thousands of Gaia sources; demand > a few hundred.
 MIN_PLAUSIBLE_STARS = 300
+# Minimum ISS altitude (deg) over the observer for a scene to be considered a real visible pass.
+# Below this the satellite is too low / below the horizon to image — freezing such a scene would
+# bake a fictional below-horizon geometry into every downstream test (review F1).
+MIN_PASS_ALT_DEG = 20.0
+# SGP4 is only trustworthy near the TLE epoch; refuse obs times further than this from epoch (F2).
+MAX_DAYS_FROM_EPOCH = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +113,8 @@ def write_tle_snapshot(text: str, dest: str, provenance: str) -> "_scene.TLE":
     body = f"# {provenance}\n{tle.name}\n{tle.line1}\n{tle.line2}\n" if tle.name else (
         f"# {provenance}\n{tle.line1}\n{tle.line2}\n"
     )
-    _atomic_write(dest, body)
+    # Keep exactly one committed TLE fixture (F4): replace any older iss_*.txt siblings.
+    _replace_only(dest, body, glob="*.txt")
     return tle
 
 
@@ -117,7 +127,8 @@ def write_gaia_snapshot(text: str, dest: str, provenance: str):
 
     ascii_io.write(tbl, buf, format="csv")
     body = f"# {provenance}\n" + buf.getvalue()
-    _atomic_write(dest, body)
+    # Keep exactly one committed catalogue fixture (F4): replace any older gaia_*.csv siblings.
+    _replace_only(dest, body, glob="*.csv")
     return tbl
 
 
@@ -127,6 +138,29 @@ def _atomic_write(dest: str, body: str) -> None:
     tmp = p.with_suffix(p.suffix + ".tmp")
     tmp.write_text(body)
     os.replace(tmp, p)
+
+
+def _replace_only(dest: str, body: str, glob: str) -> None:
+    """Atomically write `dest`, then delete every OTHER file in its dir matching `glob`.
+
+    Keeps exactly ONE committed fixture per kind (review F4): re-fetching at a new center/date
+    no longer orphans the previous snapshot, so default_*_path can never resolve a stale file.
+    """
+    _atomic_write(dest, body)
+    p = Path(dest)
+    for sib in p.parent.glob(glob):
+        if sib.resolve() != p.resolve():
+            sib.unlink()
+
+
+def catalogue_filename(ra_deg: float, dec_deg: float) -> str:
+    """Deterministic Gaia fixture filename for a center, mangling ONLY the Dec sign (review F5).
+
+    A negative Dec -> 'decm<abs>'; the leading-'-' is mangled on the Dec COMPONENT alone, never
+    over the whole string (the old `.replace('-', 'm')` only worked because RA happened to be >= 0).
+    """
+    dec_tok = f"m{abs(dec_deg):.3f}" if dec_deg < 0 else f"{dec_deg:.3f}"
+    return f"gaia_ra{ra_deg:.3f}_dec{dec_tok}.csv"
 
 
 # ---------------------------------------------------------------------------
@@ -153,29 +187,100 @@ def fetch_tle(catnr: int) -> tuple[str, str]:
     return _http_get(url), url
 
 
-def resolve_pointing(tle: "_scene.TLE", cfg: "_scene.SceneConfig") -> tuple[float, float]:
-    """Propagate the TLE to cfg.utc as seen from the observer -> ICRS (RA, Dec) in degrees.
+def _build_sat_observer(tle: "_scene.TLE", cfg: "_scene.SceneConfig"):
+    """Construct (timescale, EarthSatellite, observer) once for the geometry helpers."""
+    from skyfield.api import EarthSatellite, load, wgs84
+
+    ts = load.timescale()
+    sat = EarthSatellite(tle.line1, tle.line2, tle.name or "sat", ts)
+    observer = wgs84.latlon(cfg.observer_lat_deg, cfg.observer_lon_deg, cfg.observer_elev_m)
+    return ts, sat, observer
+
+
+def _exposure_midpoint_utc(cfg: "_scene.SceneConfig") -> str:
+    """The exposure MIDPOINT UTC = config `utc` (exposure START) + exposure_s/2.
+
+    Per the plan's truth-at-midpoint convention (Sprint 2): truth = sat RA/Dec at exposure
+    midpoint, so the PUBLIC camera pointing also centers on the midpoint position.
+    """
+    start = _parse_dt(cfg.utc)
+    mid = start + _dt.timedelta(seconds=cfg.exposure_s / 2.0)
+    return mid.isoformat().replace("+00:00", "Z")
+
+
+def resolve_pointing_at(
+    tle: "_scene.TLE", cfg: "_scene.SceneConfig", utc: str
+) -> tuple[float, float]:
+    """Propagate the TLE to a SPECIFIC UTC -> ICRS (RA, Dec) in degrees, seen from the observer.
 
     Uses skyfield's topocentric (sat - observer).at(t).radec() with no epoch arg -> ICRS astrometric
     RA/Dec, the SAME frame the solver's WCS recovers (no truth/measured frame mismatch downstream).
     """
-    from skyfield.api import EarthSatellite, load, wgs84
-
-    ts = load.timescale()
-    t = _parse_utc(cfg.utc, ts)
-    sat = EarthSatellite(tle.line1, tle.line2, tle.name or "sat", ts)
-    observer = wgs84.latlon(cfg.observer_lat_deg, cfg.observer_lon_deg, cfg.observer_elev_m)
+    ts, sat, observer = _build_sat_observer(tle, cfg)
+    t = _to_time(utc, ts)
     ra, dec, _ = (sat - observer).at(t).radec()  # ICRS astrometric
     return float(ra._degrees), float(dec.degrees)
 
 
-def _parse_utc(utc: str, ts):
-    """Parse an ISO-8601 'Z' UTC string into a skyfield Time."""
+def resolve_pointing(tle: "_scene.TLE", cfg: "_scene.SceneConfig") -> tuple[float, float]:
+    """Resolve the camera center = the ISS ICRS RA/Dec at the EXPOSURE MIDPOINT (truth convention)."""
+    return resolve_pointing_at(tle, cfg, _exposure_midpoint_utc(cfg))
+
+
+def iss_altitude_deg(tle: "_scene.TLE", cfg: "_scene.SceneConfig", utc: str | None = None) -> float:
+    """ISS altitude (deg) over the observer at the given UTC (default: the exposure midpoint)."""
+    ts, sat, observer = _build_sat_observer(tle, cfg)
+    t = _to_time(utc or _exposure_midpoint_utc(cfg), ts)
+    alt, _az, _d = (sat - observer).at(t).altaz()
+    return float(alt.degrees)
+
+
+def abs_days_from_epoch(tle: "_scene.TLE", utc: str) -> float:
+    """|utc - TLE epoch| in days. SGP4 is fiction far from epoch -> the obs time must stay close."""
+    from skyfield.api import EarthSatellite, load
+
+    ts = load.timescale()
+    sat = EarthSatellite(tle.line1, tle.line2, tle.name or "sat", ts)
+    epoch = sat.epoch.utc_datetime()
+    return abs((_parse_dt(utc) - epoch).total_seconds()) / 86400.0
+
+
+def assert_pass_is_visible(tle: "_scene.TLE", cfg: "_scene.SceneConfig") -> float:
+    """Fail-closed Poka-Yoke (review F1+F2): the obs time MUST be a REAL visible pass near epoch.
+
+    Raises ValueError if the ISS is below MIN_PASS_ALT_DEG at the exposure midpoint, OR if the obs
+    time is further than MAX_DAYS_FROM_EPOCH from the TLE epoch. A below-horizon or far-from-epoch
+    scene must NEVER be frozen — it would bake fictional SGP4 geometry into every downstream test.
+    Returns the asserted (positive) altitude on success.
+    """
+    days = abs_days_from_epoch(tle, cfg.utc)
+    if days > MAX_DAYS_FROM_EPOCH:
+        raise ValueError(
+            f"obs time {cfg.utc} is {days:.2f} days from the TLE epoch "
+            f"(> {MAX_DAYS_FROM_EPOCH} d) — SGP4 is unreliable that far out; refusing to freeze"
+        )
+    alt = iss_altitude_deg(tle, cfg)
+    if alt <= MIN_PASS_ALT_DEG:
+        raise ValueError(
+            f"ISS altitude at the exposure midpoint is {alt:.2f} deg "
+            f"(<= {MIN_PASS_ALT_DEG} deg horizon floor) — not a visible pass; refusing to freeze "
+            "a below-horizon scene"
+        )
+    return alt
+
+
+def _parse_dt(utc: str) -> _dt.datetime:
+    """Parse an ISO-8601 'Z' UTC string into a timezone-aware datetime."""
     s = utc.replace("Z", "+00:00")
-    dt = _dt.datetime.fromisoformat(s)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=_dt.timezone.utc)
-    return ts.from_datetime(dt)
+    d = _dt.datetime.fromisoformat(s)
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=_dt.timezone.utc)
+    return d
+
+
+def _to_time(utc: str, ts):
+    """Parse an ISO-8601 'Z' UTC string into a skyfield Time."""
+    return ts.from_datetime(_parse_dt(utc))
 
 
 def write_center_into_config(ra_deg: float, dec_deg: float) -> None:
@@ -242,14 +347,20 @@ def main() -> int:
     print(f"      wrote {tle_dest.relative_to(_REPO)}")
 
     print("[2/3] resolving camera pointing from the TLE geometry (skyfield) ...")
-    ra0, dec0 = resolve_pointing(tle, cfg)
+    # Fail-closed BEFORE resolving/fetching: the config obs time MUST be a real visible pass near
+    # epoch (review F1+F2). A below-horizon / far-from-epoch scene raises here and freezes nothing.
+    alt = assert_pass_is_visible(tle, cfg)
+    print(
+        f"      visible-pass check OK: ISS alt={alt:.2f} deg at exposure midpoint "
+        f"({_exposure_midpoint_utc(cfg)}), {abs_days_from_epoch(tle, cfg.utc):.2f} d from epoch"
+    )
+    ra0, dec0 = resolve_pointing(tle, cfg)  # center = ISS RA/Dec at the exposure MIDPOINT
     write_center_into_config(ra0, dec0)
     print(f"      center RA={ra0:.6f} deg  Dec={dec0:.6f} deg (written into config)")
 
     print(f"[3/3] fetching Gaia DR3 cone (r={CONE_RADIUS_DEG} deg, mag<{cfg.gaia_mag_limit}) ...")
     csv_text, adql = fetch_gaia_cone(ra0, dec0, cfg.gaia_mag_limit)
-    safe_center = f"ra{ra0:.3f}_dec{dec0:.3f}".replace("-", "m")
-    cat_dest = CAT_DIR / f"gaia_{safe_center}.csv"
+    cat_dest = CAT_DIR / catalogue_filename(ra0, dec0)
     tbl = write_gaia_snapshot(
         csv_text, str(cat_dest),
         provenance=(
