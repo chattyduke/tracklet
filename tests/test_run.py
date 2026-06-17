@@ -148,6 +148,39 @@ def test_detect_failure_is_honest_no_residual(tmp_path, capsys, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Stale-artifact hygiene (non-solver) — a FAILED run must NOT leave a prior run's RESULT artifacts
+# (residual.txt / report.md / overlay.png) on disk, where a stranger inspecting out/ could mistake
+# them for the current result. The exit code is honest; the disk must be too.
+# ---------------------------------------------------------------------------
+
+
+def test_failed_run_clears_stale_result_artifacts(tmp_path, capsys, monkeypatch):
+    out = tmp_path / "out"
+    out.mkdir()
+    # Pre-seed RESULT artifacts from a notional prior SUCCESSFUL run into the SAME out dir (the
+    # default --out is the persistent repo out/, so this collision is reachable on the headline path).
+    (out / "residual.txt").write_text("999.999999\n")
+    (out / "report.md").write_text("# stale prior report\n")
+    (out / "overlay.png").write_bytes(b"\x89PNG\r\n\x1a\n stale")
+
+    def _fake_solve(image_path, scale_hint):
+        return SolveFailure(reason="injected solve failure")
+
+    monkeypatch.setattr(run_module, "solve_pointing", _fake_solve)
+
+    rc = main(["--out", str(out)])
+    captured = capsys.readouterr()
+
+    assert rc != 0, "a SolveFailure must surface as a NON-ZERO exit code"
+    assert "could not solve" in captured.out.lower()
+    # The stale RESULT artifacts must be GONE — a failed run leaves NO residual/report/overlay that
+    # could be mistaken for the current result.
+    assert not (out / "residual.txt").exists(), "stale residual.txt must be cleared by a failed run"
+    assert not (out / "report.md").exists(), "stale report.md must be cleared by a failed run"
+    assert not (out / "overlay.png").exists(), "stale overlay.png must be cleared by a failed run"
+
+
+# ---------------------------------------------------------------------------
 # run-side seal (non-solver) — run never opens the sealed truth; score is the sole reader.
 # ---------------------------------------------------------------------------
 
