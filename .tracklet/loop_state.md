@@ -2,8 +2,8 @@
 current_milestone: M0
 current_increment: "S6 report + run + ONE-command (full-pipeline run.py incl. blind-recovered WCS; @solver happy path; honest failure; wire the malformed-scale_hint fix)"
 last_increment_id: "S5 measure_position + score (pixel->RA/Dec->arcsec residual; sole truth reader)"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 069ccb718b5925695653b79bfebabfb68b5ad2a2
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 82, failed: 0, note: 'S5 added 12 tests (measure_position 6 + score 6). AC 5.3 golden detect+measure residual 1.60" (TRUE WCS, ~0.32px) << 10" gate. 2nd adversarial review ACCEPT; all 4 mutations caught.'}
@@ -13,30 +13,40 @@ plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []  # S5 review @ tick 13 = ACCEPT (no blocker/major). 1 MINOR (AC 5.3's 10" gate is loose vs a 1-px convention error; the convention is tightly pinned by the 5.1b round-trip, so this is an S7-e2e design note) CARRIED to S7 (see post-S5-build note); 2 NITs no-action. The S3 malformed-scale_hint KeyError MINOR is now ACTIONABLE in S6 (run.py wires real callers).
 next_action: >-
-  Run the S6 PLAN tick (status FRESH -> per §3.2 this opens GENBA -> RESEARCH -> IDEATE -> PLAN, HARD-STOP at the
-  plan-lock; the S6 BUILD is the tick AFTER). GENBA: clean tree + only loop-authored commits since last_green_sha
-  069ccb7, re-hash plan, baseline 82 non-solver + 2 solver green, RE-READ the plan's Sprint 6 (report.py + run.py +
-  Makefile; honest-failure reporting; determinism). RESEARCH: likely SKIP (pure wiring + matplotlib overlay over
-  the existing modules; no external unknown). IDEATE: a BRIEF brief — S6 WIRES THE FULL PIPELINE end-to-end for the
-  first time WITH the BLIND-RECOVERED WCS (render -> solve_pointing(blind) -> detect_streak -> measure_position
-  (recovered WCS) -> score -> report), so run.py's happy path is @solver. PLAN: JIT shortcut on Sprint 6 if fully
-  covered; keep plan_sha256; set PLAN_LOCKED_AWAITING_BUILD.
-  S6 scope shape (confirm against plan Sprint 6, lines ~252-258): (a) src/tracklet/report.py: write_report(score,
-  overlay_inputs, out_dir) -> report.md (scene summary; solve status; detection status; residual arcsec; threshold
-  + pass/fail) + overlay.png (matplotlib; the detected streak + measured vs truth marker for transparency); (b)
-  src/tracklet/run.py: python -m tracklet.run [--config ...] -> out/{image.fits, truth.json, residual.txt,
-  overlay.png, report.md}, PRINTS the residual; (c) Makefile: make run | test | test-golden.
-  TWO load-bearing obligations: (1) HONEST FAILURE — if solve_pointing returns SolveFailure or detect_streak
-  returns DetectFailure, run.py reports "could not solve"/"could not detect" and NEVER fabricates a residual
-  (typed failure all the way out). (2) WIRE THE CARRIED FIX — make solve_pointing return SolveFailure (not raise
-  KeyError) on a malformed scale_hint now that run.py constructs the real scale_hint (small, contract-respecting
-  edit to solve_pointing._scale_bounds/solve_pointing; add a NON-solver test for the malformed-hint -> SolveFailure
-  path; the @solver suite must stay green). @solver happy-path test: python -m tracklet.run on the golden scene ->
-  residual.txt exists + finite + the FULL blind-solve residual is reported (this is the first full-pipeline @solver
-  proof; the formal sealed golden e2e + README + 3 seal tests are S7). Determinism (same machine): make run twice
-  -> identical image.fits hash + identical residual. NOT a milestone (S7 closes M0) -> no tag. Touches
-  solve_pointing.py ONLY for the carried fix (re-run @solver after). Do NOT touch render/detect/measure/score.
-  Merge feat/S6 -> main on green + all findings dispositioned.
+  BUILD S6 (Sprint 6: report + run + ONE-command) — the locked design brief is at the bottom of this file
+  (tick 14). Cut feat/S6 off main. Implement via /tdd-harness or a spawned Generator; tests run with
+  ~/tracklet/.venv/bin/python.
+  (A) src/tracklet/report.py: write_report(score, overlay_inputs, out_dir) -> report.md (scene summary; solve
+  status; detection status; residual arcsec; threshold + PASS/FAIL; provenance: TLE source+date, Gaia query,
+  solver + index series, Python version; what-it-proves / what-it-does-NOT) + overlay.png (matplotlib: image +
+  detected streak + measured position + a labelled TRUTH marker for transparency). report reads truth ONLY via the
+  score result (score_result.truth) — it MUST NOT open truth.json (score stays the SOLE reader).
+  (B) src/tracklet/run.py: main(argv)->int wires scene -> render -> solve_pointing(image_path) -> detect_streak
+  (image_path) -> measure_position(streak, RECOVERED wcs) -> score(measured, out_dir/truth.json) -> report, behind
+  python -m tracklet.run [--config ...]. KEEP the existing assert_supported_python() guard FIRST. Emit out/{image.
+  fits, truth.json, residual.txt, overlay.png, report.md}; PRINT the residual. HONEST FAILURE (load-bearing): a
+  SolveFailure or DetectFailure -> labelled message ("could not solve"/"could not detect") + NON-ZERO exit + NO
+  residual.txt / NO fabricated residual (typed failure all the way out). run.py PASSES truth_path to score (does
+  NOT open it).
+  (C) Makefile: make run | test | test-golden.
+  (D) WIRE THE CARRIED FIX: solve_pointing must RETURN SolveFailure (not raise KeyError) on a malformed scale_hint
+  (small edit to solve_pointing._scale_bounds/solve_pointing; SolveFailure is already a valid return so the
+  contract holds). Add a NON-solver test (malformed hint -> SolveFailure, fails before invoking solve-field).
+  RE-RUN the @solver suite after touching solve_pointing.
+  ACs (plan Sprint 6, lines 259-261): 6.1 ONE command produces residual.txt + overlay.png + report.md (@solver
+  happy path: python -m tracklet.run on the golden scene -> the FIRST full-pipeline BLIND-solve residual, finite +
+  printed + written to residual.txt); 6.2 solve-failure path honest + NON-ZERO exit + no fabricated residual
+  (NON-solver: monkeypatch solve_pointing -> SolveFailure, assert run.py behavior + that residual.txt is NOT
+  written); 6.3 detect-failure path honest (NON-solver: star-only frame -> DetectFailure -> run.py reports
+  honestly); 6.4 out/ artifacts well-formed. Determinism: make run twice -> identical image.fits hash + identical
+  residual.
+  SCOPE: implement report.py + run.py + Makefile + the solve_pointing carried fix ONLY. Do NOT touch
+  render/detect/measure/score. Sealed-truth: json.load must STILL appear ONLY in score.py (run/report pass/use the
+  path/result, never open truth.json) — re-verify post-build. NOT a milestone (S7 closes M0) -> NO tag. Do NOT
+  pull S7's formal golden e2e / 3 seal tests / README forward (YAGNI). REVIEW: S6 edits solve_pointing.py (a prior
+  @solver module) + wires the whole pipeline -> a thorough local PHASE-5 review; spawn a 2nd independent pass if
+  the diff is large or touches the solve path materially. Merge feat/S6 -> main on green (non-solver + @solver) +
+  all findings dispositioned.
 human_gate: false
 tick_lock: null
 
@@ -446,3 +456,61 @@ reader, measure reads nothing — done right, not broken; (c) signed contracts p
 - [tick 13 | REVIEW-DISPOSITION] Thought: unlike tick 11's MAJOR (the increment's OWN AC failed to catch its target), here the convention IS tightly caught by 5.1b (mutation-confirmed) — the MINOR is a forward-looking note about S7's @solver e2e gate, NOT an S5 hole. So CARRY (not fix-in-tick); 2 NITs no-action with rationale. → Action(record the MINOR as an S7 carried watch-item in the post-S5-build note; NITs documented) → Observation: every finding dispositioned; no in-tick code change needed (S5's own tests are sound). PHASE-5 gate met.
 - [tick 13 | INTEGRATE] Thought: gate passed (ACCEPT + all dispositioned + both suites green) → integrate. → Action(git merge --no-ff feat/S5 -> main; pytest non-solver + solver; delete feat/S5) → Observation: merged @ 069ccb7; 82 non-solver + 2 @solver green on main; branch deleted. S5 ≠ a milestone (S7 closes M0) → no tag. no_progress_count stays 0 (green increment landed).
 - [tick 13 | HANSEI] What worked: the MANDATORY 2nd review for a seal-touching increment did exactly its job — it PROVED (not asserted) the non-circularity seal by independently grepping the whole tree (json.load once, in score), recomputing the great-circle arithmetic to 2e-11", and re-rendering from scratch to reproduce 1.60". The measurement chain is now closed end-to-end on the TRUE WCS, and the residual's internal consistency (1.60" = detect's 0.32px x pixel scale) is the strongest evidence the pixel convention is right. Honest scoping: I distinguished this review's MINOR (a forward S7-e2e design note, convention already tightly pinned by 5.1b) from tick 11's MAJOR (an actual in-increment test hole) — carry vs fix-in-tick is a real judgment, not a reflex. KAIZEN (S6): S6 wires the FULL pipeline with the BLIND-recovered WCS for the first time (run.py happy path = @solver) AND must wire the carried malformed-scale_hint fix (solve_pointing -> SolveFailure not KeyError) + honest typed failure all the way out (never fabricate a residual on no-solve/no-detect). Anti-spin: green merge → no_progress stays 0. Per §3.2 the integrate tick advances the ladder: status set FRESH for S6 (the S6 PLAN tick is next).
+
+- [tick 14 | GENBA] Thought: status FRESH for S6; per §3.2 a PLAN-only tick (GENBA→RESEARCH→IDEATE→PLAN, hard-stop at the lock). Verify §3.5 + RE-READ the plan's Sprint 6 + the run.py/report.py stubs before planning. → Action(Read state; git status --porcelain + HEAD + commits since 069ccb7; re-hash plan; baseline pytest; Read plan lines 250-330 = Sprint 6 ACs + Verification + Risks; Read run.py + report.py stubs) → Observation: clean tree, only the tick-13 bookkeeping commit since 069ccb7 (no drift), plan SHA matches d7237cdd…, baseline 82/82 green. Sprint 6 grounded (report.py + run.py + Makefile; ACs 6.1-6.4; honest-failure non-zero exit + no fabricated residual; determinism). run.py stub already calls assert_supported_python() FIRST (the S0 minor-version guard) — must preserve. report contract "reads truth only via the score result".
+- [tick 14 | RESEARCH] Thought: S6 is pure wiring + a matplotlib overlay over already-built modules; matplotlib + the whole stack installed at S0; no dataset/API/algorithm unknown. → Action(none — JIT SKIP) → Observation: research SKIPPED (mechanical wiring; S6 settled by the plan + installed libs).
+- [tick 14 | IDEATE] Thought: S6 is fully specified (Sprint 6) but CONSEQUENTIAL — first full-pipeline @solver run, honest-failure paths, + the carried solve_pointing fix → a BRIEF brief, not a full brainstorm. → Action(emit BRIEF design brief, below) → Observation: brief recorded. Seal stays intact: the MEASUREMENT path (solve/detect/measure) never sees truth; score reads it (sole reader); run PASSES the truth path to score (does not open it); report uses score_result.truth for the transparency marker (does not open truth.json) — so json.load must STILL appear only in score.py post-build. Pre-Mortem clear: (a) implements the two stubs; (b) sealed-truth preserved (measurement path truth-free; score sole reader); (c) signed contracts preserved (run.main(argv)->int; report.write_report(score,overlay_inputs,out_dir); the carried fix keeps solve_pointing's contract — SolveFailure is already a valid return); (d) scope == Sprint 6 (S7's golden e2e/seal-tests/README NOT pulled forward).
+- [tick 14 | PLAN] Thought: JIT shortcut — S6 fully covered by the approved plan (Sprint 6, ACs 6.1-6.4); skip /ultraplan, consume it, keep plan_sha256. → Action(set status PLAN_LOCKED_AWAITING_BUILD; keep plan_file/SHA; write the S6 BUILD next_action incl. the carried fix) → Observation: status PLAN_LOCKED_AWAITING_BUILD; plan_sha256 unchanged d7237cdd…; per §3.2 the FRESH tick HARD-STOPS here — the S6 BUILD is the next tick. no_progress stays 0 (plan-lock = progress).
+
+### increment design brief (tick 14)
+
+```
+S6 — report + run + ONE command. Build EXACTLY Sprint 6 of the approved plan (ACs 6.1-6.4) + wire the carried
+malformed-scale_hint fix. S6 WIRES THE FULL PIPELINE end-to-end for the first time WITH the BLIND-RECOVERED WCS
+(render -> solve_pointing(blind) -> detect_streak -> measure_position(recovered WCS) -> score -> report), so
+run.py's happy path is @solver — the first full-pipeline blind-solve residual.
+
+CHOSEN APPROACH (two stubs + Makefile + one carried fix):
+  - report.py: write_report(score, overlay_inputs, out_dir) -> report.md (scene summary; solve status; detection
+    status; residual arcsec; threshold + PASS/FAIL; provenance: TLE source+date, Gaia query, solver + index
+    series, Python version; what-it-proves / what-it-does-NOT) + overlay.png (matplotlib: image + detected streak
+    + measured position + a labelled TRUTH marker, FOR TRANSPARENCY). report reads truth ONLY via the score result
+    (score_result.truth) — NEVER opens truth.json (score stays the sole reader).
+  - run.py: main(argv)->int. KEEP assert_supported_python() FIRST. scene=build_scene(config) -> render_scene ->
+    image.fits + truth.json in out/ -> solve_pointing(image_path, scale_hint from scene.fov_deg) -> detect_streak
+    (image_path) -> measure_position(streak, RECOVERED wcs) -> score(measured, out_dir/truth.json) -> write_report.
+    Emit out/{image.fits, truth.json, residual.txt, overlay.png, report.md}; PRINT the residual; exit 0 on a clean
+    run. HONEST FAILURE: a SolveFailure / DetectFailure -> labelled message ("could not solve"/"could not detect")
+    + NON-ZERO exit + NO residual.txt + NO fabricated residual (typed failure all the way out).
+  - Makefile: make run | test | test-golden.
+  - CARRIED FIX (solve_pointing.py): malformed scale_hint -> RETURN SolveFailure (not raise KeyError). SolveFailure
+    is already a valid return -> contract-respecting. Add a NON-solver test (malformed hint -> SolveFailure, fails
+    before solve-field is invoked). RE-RUN @solver after.
+
+THE SEAL (stays intact — re-verify post-build): json.load appears ONLY in score.py. run passes the truth PATH to
+score; report uses the score RESULT's truth; the three solving modules + measure are unchanged + truth-free. The
+overlay's truth marker is post-scoring transparency, not a measurement input.
+
+TOUCHED MODULES: src/tracklet/report.py + src/tracklet/run.py (implement stubs) + src/tracklet/solve_pointing.py
+(carried fix ONLY) + Makefile + tests/{test_report.py, test_run.py, + a non-solver malformed-hint test for
+solve_pointing}. render/detect_streak/measure_position/score/scene UNTOUCHED.
+
+DATA FLOW: config -> run -> render(out/) -> solve(image)->WCS | detect(image)->streak -> measure(streak,WCS)->
+SkyCoord -> score(measured, out/truth.json)->ScoreResult -> report(score, overlay_inputs, out/) -> artifacts.
+
+TEST ORACLE (ACs 6.1-6.4): 6.1 @solver — python -m tracklet.run on the golden scene produces residual.txt +
+overlay.png + report.md; residual finite + printed + written (the FIRST full-pipeline blind-solve residual; run
+with ~/tracklet/.venv/bin/python). 6.2 NON-solver — monkeypatch solve_pointing -> SolveFailure; run.py reports
+"could not solve" + non-zero exit + NO residual.txt (no fabrication). 6.3 NON-solver — star-only frame ->
+detect_streak DetectFailure -> run.py reports "could not detect" honestly + non-zero exit. 6.4 out/ artifacts
+well-formed (report.md has the residual + PASS/FAIL; residual.txt parses to a float; overlay.png is a valid PNG).
+Determinism: make run twice -> identical image.fits hash + identical residual. + the carried-fix non-solver test.
+
+YAGNI / OUT OF SCOPE: NO formal 3 seal tests, NO golden-e2e gate test, NO README (all S7); NO real image (M1); NO
+new config knobs. report + run + Makefile + the one carried fix ONLY. Do NOT pull S7 forward.
+
+JUDGE: N/A — brief design brief (Sprint 6 fully specified; no design fork). Pre-Mortem guard, all clear:
+(a) implements the report + run stubs (re-invents nothing); (b) sealed-truth preserved — measurement path
+truth-free, score the sole reader, run/report never open truth.json; (c) signed contracts preserved (run.main /
+report.write_report / solve_pointing's SolveFailure-valid-return); (d) scope == Sprint 6 + the carried fix.
+```
