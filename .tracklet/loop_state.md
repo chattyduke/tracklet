@@ -2,8 +2,8 @@
 current_milestone: M0
 current_increment: "S2 render (synthetic scene + sealed truth)"
 last_increment_id: "S1 scene + frozen real-data fixtures"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 274624fd336e3aa6c2e691a97f69efd4d7ba6727
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 41, failed: 0}
@@ -13,29 +13,29 @@ plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []  # all S1 review findings dispositioned at tick 5 (F1-F5 fixed + independently verified, F6 rejected)
 next_action: >-
-  S2 (Sprint 2: render — synthetic scene + SEALED truth) is the next rung and the HIGHEST-STAKES
-  increment for the sealed-truth invariant: render_scene is the SOLE writer of truth.json AND must write
-  image.fits with NO WCS header (clean FITS). Next tick opens FRESH -> GENBA -> RESEARCH (SKIP — pure
-  construction over the frozen fixtures, no external unknown) -> IDEATE (JUDGE at the tick: S2 has real
-  design content — TAN WCS w/ negative CD1_1 + wcs_world2pix, Gaussian-PSF star projection, Skyfield
-  streak at exposure start/mid/end, Poisson+read noise, AND the sealed-truth write boundary — this MAY
-  warrant a brief design brief rather than a pure SKIP) -> PLAN (JIT shortcut: S2 fully specified as
-  Sprint 2 in the approved plan, same SHA; lock + end at ExitPlanMode). Build S2 (tick after) to the seal
-  from the first commit: solving modules' signatures take image_path/wcs only; truth.json written ONLY by
-  render; the WCS round-trip (Y-flip / CD-sign / origin) gets explicit unit tests (plan Sprint 2 ACs
-  2.1-2.5). Use ~/tracklet/.venv/bin/python.
+  BUILD S2 (Sprint 2: render — synthetic scene + SEALED truth) — the locked design brief is at the
+  bottom of this file (tick 6). Cut feat/S2 off main. Implement src/tracklet/render.py
+  render_scene(scene, catalogue, tle) -> RenderResult via /tdd-harness or a spawned Generator. BUILD TO
+  THE SEAL from the first commit: render is the SOLE writer of truth.json AND image.fits MUST be WCS-FREE
+  (no CRVAL/CD*/CTYPE — assert it). Synthetic RA---TAN/DEC--TAN WCS (negative CD1_1, crpix center,
+  wcs_world2pix origin=0, img[y,x] Y-flip), Gaussian-PSF Gaia stars, Skyfield streak at exposure
+  start/mid/end (truth = MIDPOINT), deterministic Poisson+read noise via default_rng(seed). ACs 2.1-2.5:
+  determinism (same-seed array hash), clean-FITS, truth.json holds injected truth, WCS round-trip sub-px,
+  streak endpoints match geometry. Consume frozen S1 fixtures OFFLINE. THEN PHASE 5 is HIGH-RISK (first
+  truth.json writer + WCS math) → MANDATORY second independent LOCAL review pass over git diff
+  main..feat/S2 (NEVER /code-review ultra). Merge on green + all dispositioned. Use ~/tracklet/.venv/bin/python.
 human_gate: false
 tick_lock: null
 
-# --- post-S1 note (read before the next PLAN/BUILD tick) ---
-# S1 merged GREEN at last_green_sha 274624f (--no-ff). main HEAD after this tick is the bookkeeping
-# commit one past 274624f — expected post-integration state, NOT a §3.5 anomaly (a FRESH planning tick
-# does not build). Scene is now physically coherent (the tick-4 review caught it; the tick-5 FIX +
-# re-review ACCEPTed): ISS at alt 73.1 deg over Perth, 0.49 d from the TLE epoch, 2.1 deg cone / 8821
-# Gaia stars covering the 2.84 deg field; obs_utc=2026-06-17T08:36:12Z, center=(133.860, -42.593).
-# SEALED-TRUTH WATCH for S2: render is the ONLY truth.json writer AND image.fits must be WCS-FREE — the
-# formal seal tests are S7, but build S2 to the seal from the first commit. Carried kaizen still live:
-# Gaia needs certifi-CA + retry (already in fetch_fixtures.py) for any future fetch.
+# --- post-S2-plan note (read before the S2 BUILD tick's §3.5 gate) ---
+# S2 plan LOCKED this tick (FRESH → PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan
+# (plan_sha256 unchanged). main HEAD is now the S2 plan-lock commit, a few loop-authored commits past
+# last_green_sha 274624f (S1) — expected, NOT a §3.5 anomaly. S2 BUILD tick: assert tree clean + only
+# loop-authored commits since 274624f, then cut feat/S2 off main. S2 is HIGH-RISK (render = first/only
+# truth.json writer + WCS math) → PHASE 5 gets a MANDATORY second independent LOCAL review pass. Build to
+# the seal (truth.json sole-writer; image.fits WCS-free) from the first commit. Frozen scene (coherent):
+# ISS alt 73.1° over Perth, 0.49 d from epoch, 2.1° cone / 8821 stars, obs_utc 2026-06-17T08:36:12Z,
+# center (133.860, -42.593). venv ~/tracklet/.venv (Python 3.14.4).
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -169,3 +169,57 @@ all four clear: (a) re-invents nothing (scene/fetch are empty stubs); (b) sealed
 - [tick 5 | REVIEW] Thought: a FIX must clear a fresh adversarial RE-review before merge. → Action(spawn general-purpose reviewer over `git diff main..feat/S1`) → Observation: VERDICT ACCEPT. All 6 prior findings independently re-verified FIXED (F1 alt-Poka-Yoke fails closed @20° + below-horizon test raises, F2 |obs-epoch|<1d gate, F3 corners covered via real TAN-WCS projection, F4 single fixture + config-matched path, F5 dec-only mangle, F6 rejected); no new BLOCKER/MAJOR (1 NIT: filename 3dp rounding — REJECTED w/ rationale, benign under single-fixture); determinism holds (pointing from fixed config utc; now() only in provenance), sealed-truth intact, tests honest (mutation-probed). 41/41 green.
 - [tick 5 | INTEGRATE] Thought: gate passed (all dispositioned + suite green) → integrate. → Action(merge --no-ff feat/S1→main; pytest; delete feat/S1) → Observation: merged @ 274624f; 41/41 non-solver green on main; branch deleted. S1 ≠ a milestone → no tag. no_progress_count 1→0 (green increment landed).
 - [tick 5 | HANSEI] What worked: the bounce was FULLY RECOVERED in ONE FIX tick — the Generator fixed all 6 findings, a fresh RE-review ACCEPTed, and an independent skyfield check confirmed the ISS is now at +73.14° (was −84.7°). The loop's bounce→fix→re-review cycle did exactly its job: a real physical-validity defect was caught (tick 4), fixed + verified (tick 5), never papered over, never merged on the incoherent scene. Muda avoided: did NOT re-run research/ideation for the fix (§3.2 guard) — straight to BUILD on the same branch. KAIZEN (S2): render is the FIRST sealed-truth writer + the most complex module — at the S2 PLAN tick JUDGE whether its design content (TAN WCS / PSF / streak / noise / seal boundary) warrants a brief design brief vs a pure SKIP, and build to the seal (truth.json written only by render; image.fits WCS-free) from the first commit. Anti-spin: green merge → no_progress reset to 0.
+
+- [tick 6 | GENBA] Thought: status FRESH, next rung S2 (render); verify gates + re-read the plan's render contract / seal / WCS-pitfalls / Sprint-2 before planning. → Action(Read state; Read plan §contracts+seal+WCS + Sprint 2; git/plan-SHA/baseline) → Observation: on main @ b2cda6a (expected post-S1 bookkeeping commit), clean, no feat/* branches (S1 merged+deleted), plan SHA matches d7237cdd…, baseline 41/41 green. S2 contract + ACs 2.1-2.5 re-grounded.
+- [tick 6 | RESEARCH] Thought: S2 (render) is pure construction over the FROZEN S1 fixtures (committed TLE + Gaia CSV) — no dataset/API/algorithm unknown; every primitive is named in the plan (astropy WCS/fits, skyfield radec, numpy default_rng). → Action(none — JIT SKIP) → Observation: research SKIPPED (mechanical; S2 settled by the approved plan + frozen fixtures).
+- [tick 6 | IDEATE] Thought: render is the KEYSTONE module + the FIRST sealed-truth writer — a BRIEF design brief (nemawashi) pinning the seal boundary + WCS conventions is the right weight (not a full brainstorm — Sprint 2 is fully specified; not a bare skip — the seal is load-bearing). → Action(emit BRIEF design brief, below) → Observation: brief recorded; Pre-Mortem guard clear (render implements its own stub; render IS the sole truth writer + image.fits WCS-free = the seal done right; all signed contracts preserved; no speculative scope).
+- [tick 6 | PLAN] Thought: JIT shortcut — S2 fully covered by the approved plan (Sprint 2, ACs 2.1-2.5); skip /ultraplan, consume it, keep plan_sha256. → Action(set status PLAN_LOCKED_AWAITING_BUILD; keep plan_file/SHA; write the S2 BUILD next_action) → Observation: status PLAN_LOCKED_AWAITING_BUILD; plan_sha256 unchanged d7237cdd…; per §3.2 the FRESH tick HARD-STOPS here — the S2 BUILD is the next tick. no_progress stays 0 (plan-lock = progress, §3.3).
+
+### increment design brief (tick 6)
+
+```
+S2 — render (synthetic scene + SEALED truth). Build EXACTLY Sprint 2 of the approved plan (ACs 2.1-2.5).
+render is the KEYSTONE module: the data-flow hinge (scene -> render -> image.fits CLEAN + truth.json SEALED ->
+[solve, detect] -> measure -> score) AND the FIRST + SOLE writer of sealed truth. This is why the S2 BUILD is
+high-risk and its review gets a mandatory second local pass.
+
+CHOSEN APPROACH: implement render_scene(scene, catalogue, tle) -> RenderResult on the existing stub. Build a
+synthetic astropy WCS (RA---TAN/DEC--TAN, crpix at frame center, NEGATIVE CD1_1 so RA increases left, pixel
+scale from the camera model). Project the frozen Gaia stars via wcs.wcs_world2pix(ra, dec, 0) (origin=0 for
+numpy arrays) -> Gaussian PSF (sigma ~1-2 px) scaled by phot_g_mean_mag. Propagate the frozen ISS TLE via
+skyfield (sat - wgs84.latlon(observer)).at(t).radec() (ICRS, no epoch arg -> ICRS astrometric = the SAME frame
+the blind solver's WCS reports, so truth and measured share a frame — airtight non-circularity) at exposure
+START / MIDPOINT / END -> pixel endpoints + midpoint -> antialiased streak. Add deterministic Poisson + Gaussian
+read noise via numpy default_rng(seed).
+
+THE SEAL (load-bearing — this is why S2 is high-risk):
+  - render writes image.fits with NO WCS header — assert the header has NO CRVAL/CD*/CTYPE keywords (clean-FITS
+    Poka-Yoke; the formal seal test is S7 but BUILD TO IT HERE).
+  - render is the SOLE writer of truth.json (sealed): true WCS params, sat RA/Dec at MIDPOINT (scored truth
+    point) + start/end, sat pixel endpoints + midpoint, exposure window, seed, catalogue ref.
+  - the 3 solving modules' signatures stay untouched (image_path / wcs only) — they never see truth.
+
+WCS PITFALLS (each gets a round-trip world2pix<->pix2world unit test, AC 2.4): negative CD1_1; origin=0; FITS
+row-0-is-bottom vs imshow-top Y-flip (index img[y, x]); RA---TAN/DEC--TAN projection. Scored-point convention
+(locks measure<->truth, AC 2.5): truth = sat RA/Dec at exposure MIDPOINT; the streak midpoint is what
+measure_position will recover and score will compare against.
+
+TOUCHED MODULES: src/tracklet/render.py (implement stub) + tests/test_render.py (new). out/ artifacts are
+runtime-generated + gitignored. scene/solve_pointing/detect_streak/measure_position/score/report/run UNTOUCHED.
+Consumes the frozen S1 fixtures (data/) + SceneConfig (S1) OFFLINE (no network in render).
+
+TEST ORACLE (ACs 2.1-2.5, all offline): 2.1 same seed -> identical array hash (same platform + locked versions;
+cross-platform portability is the residual threshold, NOT bit-identical bytes — float PSF rendering isn't
+bit-stable across arch); 2.2 image.fits header has NO WCS keywords; 2.3 truth.json holds the injected truth;
+2.4 WCS round-trip world2pix<->pix2world within sub-px (Y-flip / CD-sign / origin guarded); 2.5 streak endpoints
+match the propagated geometry (test MAY read truth). Reuse: astropy.wcs.WCS + astropy.io.fits, skyfield
+EarthSatellite/wgs84/timescale, numpy.random.default_rng — do NOT reinvent.
+
+YAGNI / OUT OF SCOPE: NO solve/detect/measure/score (S3-S5); NO report/overlay (S6); NO real image (S8); NO
+golden e2e (S7). Render + sealed truth ONLY.
+
+JUDGE: N/A — brief design brief (no design fork; Sprint 2 fully specified). Pre-Mortem guard manual, all four
+clear: (a) implements the render stub (re-invents nothing); (b) render IS the sole truth writer + image.fits
+WCS-free — the seal done correctly, not broken; (c) all signed module contracts preserved (render_scene
+signature per the contract table); (d) scope == Sprint 2 verbatim.
+```
