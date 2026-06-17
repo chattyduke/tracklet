@@ -2,8 +2,8 @@
 current_milestone: M0
 current_increment: "S3 solve_pointing (blind plate-solve)"
 last_increment_id: "S2 render (synthetic scene + sealed truth)"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 6815c325950c1767486557c29d67e17111f9edd5
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 60, failed: 0}
@@ -13,34 +13,35 @@ plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []  # S2 review (mandatory 2nd pass) ACCEPT @ tick 7; 2 NITs rejected-for-S2; streak-brightness carried as an S3 watch-item (see next_action + tick-7 hansei)
 next_action: >-
-  S3 (Sprint 3: solve_pointing — blind plate-solve) is the next rung — the FIRST @solver increment and
-  HIGH-RISK (WCS / plate-solve path). Next tick opens FRESH -> GENBA -> RESEARCH (SKIP — solver + indexes
-  already installed at S0; the de-risk is empirical, done in the BUILD not via /deep-research) -> IDEATE
-  (BRIEF design brief: solve_pointing(image_path, scale_hint) -> SolveResult|SolveFailure; headless blind
-  solve-field --scale-units degwidth --scale-low/high from the camera model, --downsample 2 --no-plots
-  --overwrite, NO --ra/--dec seed; parse .wcs -> astropy WCS; SolveFailure (not exception) on no-solve;
-  reads NO truth) -> PLAN (JIT shortcut: Sprint 3 ACs 3.1-3.3, same SHA; lock + end at ExitPlanMode).
-  CARRIED S3 WATCH-ITEM (from the S2 review): the rendered streak peak (~162k e) is very bright and the
-  _STREAK_PEAK_E=8e3 constant in render.py is misleading vs the actual peak; the plan's Sprint 3 warns a
-  bright/saturated streak can spawn spurious solve-field detections — so AC 3.1 (real blind solve on the
-  GOLDEN STREAKED frame) must be run for real, and if the streak perturbs the solve, mitigate per the plan
-  (cap streak peak brightness in render.py + fix that constant to be honest, OR --downsample, then coarse
-  pointing hint, then ASTAP). The S3 BUILD's @solver test (AC 3.1) is run with ~/tracklet/.venv/bin/python
-  against the rendered frame; S3's review is HIGH-RISK -> mandatory 2nd local pass.
+  BUILD S3 (Sprint 3: solve_pointing — blind plate-solve) — the locked design brief is at the bottom of this
+  file (tick 8). Cut feat/S3 off main. Implement src/tracklet/solve_pointing.py
+  solve_pointing(image_path, scale_hint) -> SolveResult|SolveFailure via /tdd-harness or a spawned Generator:
+  headless BLIND solve-field (--scale-units degwidth --scale-low/high from fov_deg, --downsample 2 --no-plots
+  --overwrite, NO --ra/--dec seed), parse .wcs -> astropy WCS, SolveFailure (NOT exception) on no-solve, reads
+  NO truth (signature image_path+scale_hint only). @solver ACs run with ~/tracklet/.venv/bin/python: 3.1 render
+  the golden frame (render_scene) -> REAL blind solve -> recovered WCS ≈ true WCS (reads truth) within tolerance;
+  3.2 SolveFailure RETURNED on a pure-noise frame; 3.3 signature has no truth path. EMPIRICAL GATE (carried
+  watch-item): the streak peak ~162k e is bright + render.py _STREAK_PEAK_E=8e3 misdescribes it. IF AC 3.1 solves
+  correctly as-is -> just make that constant/docstring honest (tidy). IF the streak perturbs the solve -> mitigate
+  IN ORDER per plan Sprint 3: cap streak peak brightness in render.py (+ fix constant; RE-VERIFY the seal +
+  re-run S2 render tests) -> --downsample -> coarse pointing hint (camera, not truth) -> ASTAP. Record which
+  mitigation was used. THEN PHASE 5 is HIGH-RISK (WCS/plate-solve + @solver) -> MANDATORY 2nd independent LOCAL
+  review over git diff main..feat/S3, with the reviewer INDEPENDENTLY re-running the blind solve + checking
+  non-circularity (NEVER /code-review ultra). Merge on green + all dispositioned.
 human_gate: false
 tick_lock: null
 
-# --- post-S2 note (read before the next PLAN/BUILD tick) ---
-# S2 (render) merged GREEN at last_green_sha 6815c32 (--no-ff); the SEAL is real + adversarially verified
-# (image.fits WCS-free via raw-header check; render sole truth.json writer; solving signatures byte-identical
-# to main → non-circularity survives; off-center flux-centroid 0.03px → no CD-sign/Y-flip bug; 5/5 mutation
-# probes caught). main HEAD after this tick is the bookkeeping commit one past 6815c32 — expected, NOT a §3.5
-# anomaly (FRESH planning tick does not build). render artifacts: render_scene(scene, catalogue, tle, out_dir)
-# -> RenderResult; image.fits + truth.json under out_dir (gitignored). NEXT rung S3 (solve_pointing, FIRST
-# @solver increment, HIGH-RISK). S3 WATCH-ITEM (carried from the S2 review): streak peak ~162k e is bright +
-# the _STREAK_PEAK_E constant is misleading — AC 3.1 blind-solves the real streaked frame; if it perturbs the
-# solve, cap streak brightness (+ fix the constant) / --downsample / hint / ASTAP per plan Sprint 3.
-# venv ~/tracklet/.venv (Python 3.14.4); solve-field + 4100 indexes installed at S0.
+# --- post-S3-plan note (read before the S3 BUILD tick's §3.5 gate) ---
+# S3 plan LOCKED this tick (FRESH → PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan (SHA
+# unchanged). main HEAD is now the S3 plan-lock commit, loop-authored commits past last_green_sha 6815c32 (S2) —
+# expected, NOT a §3.5 anomaly. S3 BUILD tick: assert tree clean + only loop-authored commits since 6815c32, then
+# cut feat/S3 off main. S3 is HIGH-RISK (WCS/plate-solve + @solver) → PHASE 5 gets a MANDATORY 2nd independent
+# LOCAL review (reviewer re-runs the blind solve + checks non-circularity). render artifacts: render_scene(scene,
+# catalogue, tle, out_dir) -> RenderResult; image.fits (WCS-FREE) + truth.json under out_dir (gitignored). S3
+# WATCH-ITEM: streak peak ~162k e bright + _STREAK_PEAK_E=8e3 misleading — AC 3.1 (real blind solve on the
+# streaked frame) is the empirical gate; mitigate (cap brightness+fix constant / --downsample / hint / ASTAP)
+# only if it perturbs, re-verifying the seal if render.py is touched. venv ~/tracklet/.venv; solve-field + 4100
+# indexes installed at S0.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -234,3 +235,59 @@ signature per the contract table); (d) scope == Sprint 2 verbatim.
 - [tick 7 | REVIEW] Thought: S2 HIGH-RISK (sealed-truth write path + WCS math) → MANDATORY 2nd independent LOCAL review. → Action(spawn general-purpose reviewer over `git diff main..feat/S2`) → Observation: VERDICT ACCEPT. Seal holds (raw-header WCS-free, render sole writer, solving sigs byte-identical to main → non-circularity SURVIVES); WCS provably correct (reviewer's OWN off-center flux-centroid residual 0.03px over 30 stars; E→smaller-x, N→larger-y; round-trip tests non-tautological); streak geometry independently re-propagated runs through bright flux; determinism mutation-proven (no now()/global rng); 5/5 test-honesty mutations caught; 60 green. 2 NITs: (a) catalogue_ref re-glob → REJECTED (harmless); (b) streak peak ~162k e ≫ _STREAK_PEAK_E=8e3 (constant misleading) + a bright streak may perturb solve-field → REJECTED for S2 (no AC impact; streak bright + on-line) + CARRIED as an S3 watch-item (plan Sprint 3 mitigations).
 - [tick 7 | INTEGRATE] Thought: gate passed (ACCEPT + all dispositioned + green) → integrate. → Action(merge --no-ff feat/S2→main; pytest; delete feat/S2) → Observation: merged @ 6815c32; 60/60 non-solver green on main; branch deleted. S2 ≠ a milestone (M0 needs S0-S7) → no tag. no_progress_count stays 0 (green increment landed).
 - [tick 7 | HANSEI] What worked: the KEYSTONE landed clean in ONE tick — the spawned Generator (~123K tok build, compact report to the parent) + a rigorous MANDATORY 2nd review that VERIFIED the seal + WCS by its OWN computation. The off-center flux-centroid residual of 0.03px is the strongest possible evidence there is no CD-sign / Y-flip bug — exactly the WCS-pitfall class the plan flagged. The sealed-truth proof's foundation is now ADVERSARIALLY CONFIRMED, not asserted. KAIZEN (S3): the rendered streak is very bright (~162k e) and the _STREAK_PEAK_E=8e3 constant misdescribes it — S3's AC 3.1 (a REAL blind solve on the actual streaked golden frame) is the empirical test of whether that brightness perturbs solve-field's internal source extraction; if it does, cap the streak peak in render.py (+ make the constant honest) and/or --downsample, then coarse hint, then ASTAP, per plan Sprint 3. Carried in next_action + the post-S2 note so the S3 tick cannot lose it. Anti-spin: green merge → no_progress reset to 0.
+
+- [tick 8 | GENBA] Thought: status FRESH, next rung S3 (solve_pointing); verify gates + re-read plan Sprint 3 before planning. → Action(Read state; Read plan Sprint 3 ACs 3.1-3.3; git/plan-SHA/baseline) → Observation: on main @ 2c98859 (S2 bookkeeping), clean, no feat/* branches, plan SHA matches d7237cdd…, baseline 60/60 green. Sprint 3 re-grounded (blind solve-field, SolveFailure-not-exception, @solver AC 3.1 de-risk gated HERE not S7).
+- [tick 8 | RESEARCH] Thought: solve-field + 4100 indexes were installed + smoke-verified at S0; the only unknown (does the bright streak perturb the blind solve?) is EMPIRICAL — resolved by running AC 3.1 in the BUILD, not /deep-research. → Action(none — JIT SKIP) → Observation: research SKIPPED (externals installed at S0; de-risk is the @solver build test).
+- [tick 8 | IDEATE] Thought: solve_pointing is fully specified (Sprint 3) but consequential (WCS/plate-solve, @solver, carries the streak-brightness watch-item) → a BRIEF design brief pinning the contract + the gated mitigation ladder, not a full brainstorm. → Action(emit BRIEF design brief, below) → Observation: brief recorded; Pre-Mortem clear (implements stub; reads no truth + blind solve → sealed-truth/non-circularity preserved; contract signature preserved; scope == Sprint 3, the render-brightness cap is the plan's OWN gated mitigation not new scope).
+- [tick 8 | PLAN] Thought: JIT shortcut — S3 fully covered by the approved plan (Sprint 3, ACs 3.1-3.3); skip /ultraplan, consume it, keep plan_sha256. → Action(set status PLAN_LOCKED_AWAITING_BUILD; keep plan_file/SHA; write S3 BUILD next_action) → Observation: status PLAN_LOCKED_AWAITING_BUILD; plan_sha256 unchanged d7237cdd…; per §3.2 the FRESH tick HARD-STOPS here — the S3 BUILD is the next tick. no_progress stays 0 (plan-lock = progress).
+
+### increment design brief (tick 8)
+
+```
+S3 — solve_pointing (blind plate-solve). Build EXACTLY Sprint 3 of the approved plan (ACs 3.1-3.3).
+solve_pointing is the FIRST @solver increment and HIGH-RISK (WCS / plate-solve path).
+
+CHOSEN APPROACH: implement solve_pointing(image_path, scale_hint) -> SolveResult | SolveFailure on the stub.
+Headless BLIND solve-field: --scale-units degwidth --scale-low/high (from the camera model: fov_deg ± margin),
+--downsample 2 --no-plots --overwrite, NO --ra/--dec seed (even the known pointing is NOT fed in → airtight
+non-circularity). Parse the produced .wcs with astropy.wcs.WCS. Return a typed SolveFailure (NOT an exception)
+on no-solve. Reads NO truth — signature is (image_path, scale_hint) only (AC 3.3). Uses the S0 astrometry.cfg +
+4100 indexes (solve-field is local; no network).
+
+THE @solver DE-RISK (AC 3.1, gated EARLY here, not deferred to S7): render the golden scene via S2's
+render_scene -> image.fits (the delivered COMPOSITED frame, streak INCLUDED — the clean-FITS seal means there is
+only one frame; solving a star-only layer would be cheating), run a REAL blind solve, parse the WCS, assert the
+recovered WCS matches the TRUE WCS (from truth.json — the solver-SUCCESS test MAY read truth) within tolerance.
+CARRIED WATCH-ITEM (from the S2 review): the rendered streak peak is ~162k e (very bright) and render.py's
+_STREAK_PEAK_E=8e3 constant misdescribes it; solve-field runs its OWN source extraction and a bright/saturated
+streak CAN spawn spurious detections. So AC 3.1 is the EMPIRICAL gate: IF the blind solve converges correctly
+as-is -> no render change (just make the _STREAK_PEAK_E docstring/constant honest as a tidy). IF the streak
+perturbs/blocks the solve -> apply the plan's Sprint-3 mitigations IN ORDER: cap streak peak brightness in
+render.py (+ fix the constant) -> --downsample -> coarse pointing hint (camera-pointing, NOT satellite truth) ->
+ASTAP. Decide empirically in the BUILD; record which mitigation (if any) was needed.
+
+TOUCHED MODULES: src/tracklet/solve_pointing.py (implement stub) + tests/test_solve_pointing.py (new: @solver
+solve-success + @solver honest-failure-on-noise + a non-solver signature test). render.py MAY be touched ONLY if
+AC 3.1 needs the brightness cap (the plan's documented mitigation) — if so, RE-VERIFY the seal (capping
+brightness keeps truth.json sole-writer + image.fits WCS-free; it only dims the streak) and re-run the S2 render
+tests. scene/detect/measure/score/report/run UNTOUCHED. Branch hygiene: feat/S3 is the SOLE core branch (it may
+edit solve_pointing + optionally render — one branch, allowed).
+
+DATA FLOW: image.fits (from render, CLEAN/no-WCS) -> solve_pointing -> astropy WCS (recovered, blind). The
+recovered WCS feeds measure_position (S5). solve_pointing NEVER reads truth.json.
+
+TEST ORACLE (ACs 3.1-3.3): 3.1 @solver — render golden frame -> blind solve -> recovered WCS ≈ true WCS within
+tolerance (reads truth); run with ~/tracklet/.venv/bin/python (solve-field + indexes from S0). 3.2 @solver —
+SolveFailure RETURNED (not raised) on a pure-noise frame. 3.3 non-solver — signature takes only image_path +
+scale_hint (no truth path); structural check. `pytest -m "not solver"` stays green; the @solver tests RUN in
+this build (S0 installed the solver) and are the real proof.
+
+YAGNI / OUT OF SCOPE: NO detection (S4), measure/score (S5), report/run (S6), golden e2e (S7), real image (S8).
+Just blind solve + honest failure. NO solver-abstraction layer (one solver; ASTAP = documented manual fallback
+only if the astrometry.net path fails).
+
+JUDGE: N/A — brief design brief (Sprint 3 fully specified; no design fork). Pre-Mortem guard manual, all clear:
+(a) implements the solve_pointing stub (re-invents nothing); (b) sealed-truth preserved — solve_pointing reads
+no truth (signature image+hint only), blind solve (no pointing seed); (c) signed contract signature preserved;
+(d) scope == Sprint 3 verbatim (the render-brightness cap is the plan's OWN gated mitigation, not new scope).
+```
