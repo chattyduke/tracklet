@@ -1,83 +1,78 @@
 ---
 current_milestone: M0
-current_increment: "S6 report + run + ONE-command (full-pipeline run.py incl. blind-recovered WCS; @solver happy path; honest failure; wire the malformed-scale_hint fix)"
-last_increment_id: "S5 measure_position + score (pixel->RA/Dec->arcsec residual; sole truth reader)"
-phase: BUILD
-status: PLAN_LOCKED_AWAITING_BUILD
-last_green_sha: 069ccb718b5925695653b79bfebabfb68b5ad2a2
+current_increment: "S7 seal tests + golden e2e + README/docs -> M0 DoD + tag v0.1.0 (the FINAL M0 sprint — completes M0)"
+last_increment_id: "S6 report + run + ONE-command orchestrator (full pipeline, honest failure, solve_pointing hint fix)"
+phase: HANSEI
+status: FRESH
+last_green_sha: 9b06df802a8ac795aba21ab13688fe15879be4ec
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 82, failed: 0, note: 'S5 added 12 tests (measure_position 6 + score 6). AC 5.3 golden detect+measure residual 1.60" (TRUE WCS, ~0.32px) << 10" gate. 2nd adversarial review ACCEPT; all 4 mutations caught.'}
-  - {cmd: 'pytest -m solver', passed: 2, failed: 0, note: 'S3 blind solve ~2 arcsec worst + SolveFailure on noise; UNCHANGED by S5 (regression-guarded green on the S5 merge)'}
+  - {cmd: 'pytest -m "not solver"', passed: 95, failed: 0, note: 'S6 added 13 tests (run 7 incl. stale-artifact hygiene + report 3 + solve_pointing malformed-hint 3). 2nd adversarial review ACCEPT_WITH_NOTES; MINOR+NIT fixed in-tick.'}
+  - {cmd: 'pytest -m solver', passed: 4, failed: 0, note: 'S3 (2: blind solve ~2" + noise SolveFailure) + S6 (2: full-pipeline happy path + determinism). make run headline BLIND-solve residual = 2.08" (< 10" gate, PASS) — the FIRST end-to-end real number, independently reproduced.'}
 plan_file: ~/.claude/plans/lucky-dazzling-parasol.md
 plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
-open_findings: []  # S5 review @ tick 13 = ACCEPT (no blocker/major). 1 MINOR (AC 5.3's 10" gate is loose vs a 1-px convention error; the convention is tightly pinned by the 5.1b round-trip, so this is an S7-e2e design note) CARRIED to S7 (see post-S5-build note); 2 NITs no-action. The S3 malformed-scale_hint KeyError MINOR is now ACTIONABLE in S6 (run.py wires real callers).
+open_findings: []  # S6 review @ tick 15 = ACCEPT_WITH_NOTES (no blocker/major). 1 MINOR (stale residual.txt survives a failed run) + 1 NIT (stale-case test) BOTH FIXED in-tick + mutation-verified RED. The S5 review MINOR (AC 5.3's 10" gate loose vs 1-px convention error) is now ACTIONABLE in S7 (the golden e2e is built there) — see post-S6-build note.
 next_action: >-
-  BUILD S6 (Sprint 6: report + run + ONE-command) — the locked design brief is at the bottom of this file
-  (tick 14). Cut feat/S6 off main. Implement via /tdd-harness or a spawned Generator; tests run with
-  ~/tracklet/.venv/bin/python.
-  (A) src/tracklet/report.py: write_report(score, overlay_inputs, out_dir) -> report.md (scene summary; solve
-  status; detection status; residual arcsec; threshold + PASS/FAIL; provenance: TLE source+date, Gaia query,
-  solver + index series, Python version; what-it-proves / what-it-does-NOT) + overlay.png (matplotlib: image +
-  detected streak + measured position + a labelled TRUTH marker for transparency). report reads truth ONLY via the
-  score result (score_result.truth) — it MUST NOT open truth.json (score stays the SOLE reader).
-  (B) src/tracklet/run.py: main(argv)->int wires scene -> render -> solve_pointing(image_path) -> detect_streak
-  (image_path) -> measure_position(streak, RECOVERED wcs) -> score(measured, out_dir/truth.json) -> report, behind
-  python -m tracklet.run [--config ...]. KEEP the existing assert_supported_python() guard FIRST. Emit out/{image.
-  fits, truth.json, residual.txt, overlay.png, report.md}; PRINT the residual. HONEST FAILURE (load-bearing): a
-  SolveFailure or DetectFailure -> labelled message ("could not solve"/"could not detect") + NON-ZERO exit + NO
-  residual.txt / NO fabricated residual (typed failure all the way out). run.py PASSES truth_path to score (does
-  NOT open it).
-  (C) Makefile: make run | test | test-golden.
-  (D) WIRE THE CARRIED FIX: solve_pointing must RETURN SolveFailure (not raise KeyError) on a malformed scale_hint
-  (small edit to solve_pointing._scale_bounds/solve_pointing; SolveFailure is already a valid return so the
-  contract holds). Add a NON-solver test (malformed hint -> SolveFailure, fails before invoking solve-field).
-  RE-RUN the @solver suite after touching solve_pointing.
-  ACs (plan Sprint 6, lines 259-261): 6.1 ONE command produces residual.txt + overlay.png + report.md (@solver
-  happy path: python -m tracklet.run on the golden scene -> the FIRST full-pipeline BLIND-solve residual, finite +
-  printed + written to residual.txt); 6.2 solve-failure path honest + NON-ZERO exit + no fabricated residual
-  (NON-solver: monkeypatch solve_pointing -> SolveFailure, assert run.py behavior + that residual.txt is NOT
-  written); 6.3 detect-failure path honest (NON-solver: star-only frame -> DetectFailure -> run.py reports
-  honestly); 6.4 out/ artifacts well-formed. Determinism: make run twice -> identical image.fits hash + identical
-  residual.
-  SCOPE: implement report.py + run.py + Makefile + the solve_pointing carried fix ONLY. Do NOT touch
-  render/detect/measure/score. Sealed-truth: json.load must STILL appear ONLY in score.py (run/report pass/use the
-  path/result, never open truth.json) — re-verify post-build. NOT a milestone (S7 closes M0) -> NO tag. Do NOT
-  pull S7's formal golden e2e / 3 seal tests / README forward (YAGNI). REVIEW: S6 edits solve_pointing.py (a prior
-  @solver module) + wires the whole pipeline -> a thorough local PHASE-5 review; spawn a 2nd independent pass if
-  the diff is large or touches the solve path materially. Merge feat/S6 -> main on green (non-solver + @solver) +
-  all findings dispositioned.
+  Run the S7 PLAN tick (status FRESH -> per §3.2 this opens GENBA -> RESEARCH -> IDEATE -> PLAN, HARD-STOP at the
+  plan-lock; the S7 BUILD is the tick AFTER). S7 is the FINAL M0 sprint — its DoD COMPLETES M0. GENBA: clean tree +
+  only loop-authored commits since last_green_sha 9b06df8, re-hash plan, baseline 95 non-solver + 4 solver green,
+  RE-READ the plan's Sprint 7 (lines 263-279) + the Verification + Risks sections (288-317). RESEARCH: likely SKIP
+  (docs + seal tests + a golden-e2e gate over already-built modules; no external unknown — but the README footprint
+  /uninstall/licence facts are real facts to state accurately, confirm them). IDEATE: a BRIEF brief — S7 is the
+  milestone-completing hardening sprint; pin the 3 seal tests + the @solver golden-e2e gate + the README honesty
+  contract. PLAN: JIT shortcut on Sprint 7 if fully covered; keep plan_sha256; set PLAN_LOCKED_AWAITING_BUILD.
+  S7 scope shape (confirm against plan Sprint 7): (1) tests/test_seal.py — STATIC (AST/source scan: the 3 solving
+  modules solve_pointing/detect_streak/measure_position import no truth loader + never name the sealed artifact;
+  much is already pinned per-module — consolidate + add any gap), RUNTIME (monkeypatch score._load_truth to RAISE
+  -> the solving path still completes; only score fails), CLEAN-FITS (image.fits header has NO WCS keywords, re-
+  assert at integration). (2) tests/test_golden_e2e.py — @solver, THE executable DoD: render frozen scene -> FULL
+  pipeline (blind solve) -> assert residual_arcsec < RESIDUAL_THRESHOLD_ARCSEC; ALWAYS report the actual number +
+  the expected ~2-4" band regardless of pass/fail. (3) README honesty section: synthetic-from-REAL-data (NOT a
+  real-sensor result); threshold + error budget (quadrature ~2-4"); exact git clone -> make setup -> make
+  test-golden reproduce steps; ON-DISK FOOTPRINT + UNINSTALL path (brew astrometry-net + ~340MB indexes + the
+  astrometry.cfg add_path line); ASTAP fallback; data provenance + licences (Gaia DR3, CelesTrak, astrometry.net).
+  LICENSE; finalize requirements.lock (pinned interpreter + versions). ACs 7.1 (3 seal tests pass), 7.2 (golden
+  test passes, residual under threshold, actual number always reported), 7.3 (documented clone+steps reproduce on
+  a clean machine), 7.4 (README states what it PROVES AND what it does NOT + discloses footprint+uninstall), 7.5
+  (full pytest -m "not solver" green WITHOUT the solver installed).
+  CARRIED into S7 (from the S5 review, now ACTIONABLE): the golden-e2e 10" gate is loose vs a 1-px convention error
+  (a 1-px bug -> ~7" still < 10"); the convention is ALREADY pinned by the round-trip seal tests (S2 AC 2.4 +
+  S5 AC 5.1b) — so either explicitly NOTE that coverage in test_seal/test_golden_e2e, or add a tighter sanity bound
+  (the plan's stretch <5"), so a pixel-convention regression cannot hide under the 10" gate.
+  S7 is HIGH-RISK (completes the milestone + touches the seal formally) -> MANDATORY 2nd independent local PHASE-5
+  review. On S7 DoD met (RUN make test-golden + pytest -m "not solver" + verify the clean-clone reproduce) -> TAG
+  v0.1.0 (M0 complete). Do NOT push (human-gated). Touches tests + README + LICENSE + requirements.lock; if a seal
+  test needs a tiny hook in a solving module, RE-VERIFY that module's contract + the seal. Merge feat/S7 -> main on
+  green + all findings dispositioned + tag.
 human_gate: false
-tick_lock: {pid: 16692, started: 2026-06-17T14:37:32Z}  # tick 15 — S6 BUILD live
+tick_lock: null
 
-# --- post-S5-build note (read before the S6 PLAN tick's §3.5 gate) ---
-# S5 measure_position + score BUILT + REVIEWED (2nd adversarial pass, HIGH-RISK read-side seal) + MERGED this tick
-# (tick 13) -> main @ 069ccb7 (new last_green_sha). main HEAD is now the S5 merge + the tick-13 bookkeeping commit,
-# loop-authored commits past 069ccb7 -> expected, NOT a §3.5 anomaly. The S6 PLAN tick: assert tree clean + only
-# loop-authored commits since 069ccb7 (a FRESH planning tick does NOT build or branch).
-# Pipeline status: render (S2) + solve_pointing (S3, blind ~2") + detect_streak (S4, 0.32px) + measure_position +
-# score (S5) ALL proven. The read-side seal is now CLOSED: render is the sole truth WRITER, score._load_truth the
-# sole truth READER (independently verified: json.load appears exactly once in src/tracklet, in score.py). S5
-# golden detect+measure residual = 1.60" (TRUE WCS, ~0.32px). S6 wires the FULL pipeline end-to-end with the
-# BLIND-recovered WCS for the first time (run.py happy path is @solver); S7 then adds the formal sealed golden e2e
-# + 3 seal tests + README -> M0 DoD + tag v0.1.0.
+# --- post-S6-build note (read before the S7 PLAN tick's §3.5 gate) ---
+# S6 report + run + ONE-command BUILT + REVIEWED (2nd adversarial pass — large diff + touches the solve path) +
+# MERGED this tick (tick 15) -> main @ 9b06df8 (new last_green_sha). main HEAD is now the S6 merge + the tick-15
+# bookkeeping commit, loop-authored commits past 9b06df8 -> expected, NOT a §3.5 anomaly. The S7 PLAN tick: assert
+# tree clean + only loop-authored commits since 9b06df8 (a FRESH planning tick does NOT build or branch).
+# Pipeline status: ALL 7 modules built. THE FULL PIPELINE RUNS END-TO-END VIA ONE COMMAND (make run): render ->
+# blind solve -> detect -> measure(recovered WCS) -> score -> report, emitting residual.txt/overlay.png/report.md.
+# HEADLINE: first full-pipeline BLIND-solve residual = 2.08" (< 10" gate, PASS), independently reproduced. The
+# seal holds across the whole repo (json.load appears exactly once in src/tracklet, in score.py; run passes the
+# path, report uses the score result). S7 is the LAST M0 rung: 3 formal seal tests + the @solver golden-e2e DoD
+# gate + README/LICENSE/requirements.lock -> M0 complete -> tag v0.1.0.
 # CARRIED WATCH-ITEMS (open, NOT blocking):
-#   (1) [S6 — ACTIONABLE NOW] solve_pointing raises KeyError (not SolveFailure) on a malformed scale_hint. S6's
-#       run.py wires the real callers -> make the fix THIS sprint (contract-respecting: malformed hint -> typed
-#       SolveFailure; add a non-solver test; re-run @solver). (from S3 review)
-#   (2) [S7] AC 5.3's 10" gate is loose vs a 1-px convention error (~5"/px): a 1-px bug -> 5.81" still passes 5.3.
-#       The convention IS tightly pinned by the 5.1b world_to_pixel round-trip (mutation-confirmed), so this is NOT
-#       an S5 hole — it is a design note for S7's @solver golden e2e, which should assert a TIGHTER convention bound
-#       or explicitly lean on the round-trip seal so a pixel-convention regression cannot hide under the 10" gate.
-#       (from S5 review)
-#   (3) [M1] detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny
+#   (1) [S7 — ACTIONABLE NOW] the golden-e2e 10" gate is loose vs a 1-px convention error (a 1-px bug -> ~7" still
+#       < 10"). The convention is ALREADY pinned by the round-trip seal tests (S2 AC 2.4 + S5 AC 5.1b) -> in S7,
+#       either NOTE that coverage explicitly or add a tighter sanity bound (plan's stretch <5") so a pixel-
+#       convention regression cannot hide under the 10" gate. (from S5 review)
+#   (2) [M1] detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny
 #       edges exceed the 8px merge offset tol (only ONE edge survives the merge -> midpoint bias). Does NOT occur
-#       on the REAL rendered streak (edges within tol; residual 0.32px / measure residual 1.60"). Watch midpoint
-#       robustness for bright/wide trails in M1 (real image). (from S4 review)
-#   (4) [benign] _MIN_STREAK_SPAN_PX=100 floor is effectively unreachable given _HOUGH_MIN_LINE_LENGTH=150 — a
+#       on the REAL rendered streak (edges within tol; full-pipeline residual 2.08"). Watch midpoint robustness for
+#       bright/wide trails in M1 (real image). (from S4 review)
+#   (3) [benign] _MIN_STREAK_SPAN_PX=100 floor is effectively unreachable given _HOUGH_MIN_LINE_LENGTH=150 — a
 #       harmless belt-and-suspenders guard, NOT a defect. (S4 review NIT)
-# @solver suite (2 tests) must stay green at every later @solver-touching tick (S6 happy path will ADD to it).
-# venv ~/tracklet/.venv (Python 3.14.4); cv2/scikit-image/photutils/scipy/astropy/matplotlib installed at S0.
+# RESOLVED this tick: S3's malformed-scale_hint KeyError -> now returns a typed SolveFailure (S6 carried fix); the
+# S6 review's stale-residual MINOR + NIT -> fixed in-tick (run clears stale result artifacts at start).
+# @solver suite is now 4 tests (S3 x2 + S6 x2) — must stay green at every later @solver-touching tick; S7's golden
+# e2e ADDS to it. venv ~/tracklet/.venv (Python 3.14.4); cv2/scikit-image/photutils/scipy/astropy/matplotlib at S0.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -514,3 +509,10 @@ JUDGE: N/A — brief design brief (Sprint 6 fully specified; no design fork). Pr
 truth-free, score the sole reader, run/report never open truth.json; (c) signed contracts preserved (run.main /
 report.write_report / solve_pointing's SolveFailure-valid-return); (d) scope == Sprint 6 + the carried fix.
 ```
+
+- [tick 15 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for S6; verify PHASE-4 gates + baseline + the Makefile state before building. → Action(Read state + S6 design brief; git status --porcelain + HEAD + commits since 069ccb7; re-hash plan; baseline pytest; cat Makefile) → Observation: clean tree, only the tick-13/14 loop commits since 069ccb7 (no drift), plan SHA matches d7237cdd…, status PLAN_LOCKED_AWAITING_BUILD + tick_lock null, baseline 82/82 green. Makefile ALREADY wires run|test|test-golden (S0 scaffold) -> S6's Makefile obligation already met; build = report.py + run.py + the solve_pointing fix + tests. Set phase BUILD + tick_lock, committed begin-marker 65dcf91 on main, cut feat/S6.
+- [tick 15 | BUILD] Thought: build the full-pipeline orchestrator + report + the carried fix under TDD via a spawned Generator (parent lean). → Action(spawn general-purpose Generator on feat/S6: run.main wiring scene->render->solve(BLIND)->detect->measure(recovered WCS)->score->report; honest typed failure; report reads truth only via score result; carried solve_pointing malformed-hint->SolveFailure fix; ACs 6.1-6.4 + determinism + seal) → Observation: Generator DONE — 2 commits (RED bf8cf48, GREEN f3aa058); 94 non-solver + 4 @solver green; headline full-pipeline BLIND-solve residual 2.0815" (< 10", PASS) — the FIRST end-to-end real number. INDEPENDENTLY VERIFIED by parent: diff touches ONLY the 6 allowed files (render/detect/measure/score/scene + Makefile byte-identical); json.load appears ONLY in score.py:64; both suites green; read run.py (residual.txt written ONLY after a real residual; SolveFailure/DetectFailure -> non-zero + no residual) + report.py (reads score.truth, projects via recovered WCS, never opens the sealed artifact) + the solve_pointing diff (contract-respecting, valid hints byte-unchanged); RAN `make run` myself -> residual 2.081474 + valid PNG + honest report.md (Measured vs Truth + "what it does NOT prove"). Internal consistency: 2.08" blind ~= quadrature(1.60" detect+measure, ~1.3" solve).
+- [tick 15 | REVIEW] Thought: large diff (692 LOC) + edits solve_pointing.py (prior @solver module) + produces the HEADLINE NUMBER -> MANDATORY 2nd independent local adversarial review. → Action(spawn general-purpose adversarial reviewer over git diff main..feat/S6; reviewer ran the one command, mutation-probed honest-failure, grepped the whole tree for truth reads, recomputed the true-WCS residual, checked valid-hint equivalence) → Observation: VERDICT ACCEPT_WITH_NOTES, NO blocker/major. Honest-failure PROVEN (4 mutations caught: return-0-on-fail, fabricate-residual, both failure types); headline 2.0815" is a GENUINE blind-solve number (recomputed true-WCS 1.6047" + quadrature 1.33" solve contribution); seal intact (json.load only score.py; run passes path, report uses result, OverlayInputs carries no truth path); valid-hint behavior byte-identical (@solver 4/4); determinism reproduced. 1 MINOR: a stale residual.txt from a prior SUCCESS survives a later FAILED run into the same out/ dir (proven: pre-seed 999.99 + inject SolveFailure -> exit 2, honest msg, but 999.99 remains). + 1 NIT (no stale-case test).
+- [tick 15 | REVIEW-DISPOSITION] Thought: unlike tick 13's carry (a forward S7 design note), this MINOR is a real honesty-HYGIENE gap IN run.py on the HEADLINE artifact — and stranger-reproducibility (the M_final DoD) means someone will cat out/residual.txt and trust it. Fix is ~3 lines + a regression test (closes the NIT too). FIX in-tick (tick 11 precedent: fix cheap honesty-relevant defects before merge). → Action(add tests/test_run.py::test_failed_run_clears_stale_result_artifacts; confirm RED against current run.py (stale residual.txt survives); add run.main: unlink residual.txt/report.md/overlay.png at start before solve/detect; GREEN) → Observation: RED confirmed (stale file survived), fix GREEN. The EXISTING seal test test_run_does_not_open_truth_directly then FAILED because my fix comment literally contained "truth.json" -> reworded to "the sealed answer" (Poka-Yoke seal test earned its keep — caught a comment slip). 95 non-solver + 4 @solver green. Fix committed 24f0a8d. Every finding dispositioned (MINOR+NIT fixed + mutation-verified; the S5 MINOR carried to S7 where the golden e2e is built).
+- [tick 15 | INTEGRATE] Thought: gate passed (ACCEPT_WITH_NOTES + all dispositioned + both suites green) → integrate. → Action(git merge --no-ff feat/S6 -> main; pytest non-solver + solver; delete feat/S6) → Observation: merged @ 9b06df8; 95 non-solver + 4 @solver green on main; branch deleted. S6 ≠ a milestone (S7 closes M0) → no tag. no_progress_count stays 0 (green increment landed).
+- [tick 15 | HANSEI] What worked: the full pipeline now runs end-to-end via ONE command and produces a real, honest, independently-reproduced 2.08" blind-solve residual — the core product exists. The 2nd review for the headline-number + solve-path-touching diff did its job (proved honest-failure + the seal + the blind-vs-true distinction by recomputation, not assertion), and the in-tick MINOR fix kept the headline artifact honest (no stale residual can masquerade as current). Genchi-genbutsu: running `make run` myself + reading the artifacts (not trusting the Generator/review narrative) is what confirmed the DoD-shaped result. Konnyaku-stone moment: the seal test caught my own fix-comment slip ("truth.json") — the Poka-Yoke is load-bearing even against the operator. KAIZEN (S7): S7 CLOSES M0 — build the 3 formal seal tests (static/runtime/clean-FITS) + the @solver golden-e2e DoD gate + README/LICENSE/requirements.lock; fold in the carried convention-bound note (the 10" gate can't catch a 1-px bug; lean on the round-trip seal or add the <5" stretch sanity); on DoD met (RUN the named green commands + verify clean-clone reproduce) TAG v0.1.0. Anti-spin: green merge → no_progress stays 0. Per §3.2 the integrate tick advances the ladder: status set FRESH for S7 (the S7 PLAN tick is next).
