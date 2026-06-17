@@ -1,33 +1,33 @@
 ---
 current_milestone: M0
-current_increment: "S0 environment + plate-solver gate"
-last_increment_id: null
-phase: BUILD
-status: PLAN_LOCKED_AWAITING_BUILD
-last_green_sha: null
+current_increment: "S1 scene + frozen real-data fixtures"
+last_increment_id: "S0 environment + plate-solver gate"
+phase: HANSEI
+status: FRESH
+last_green_sha: f87fc9bc6cab4efedbb47bc2285f8173f9ae4944
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 0, failed: 0}
-  - {cmd: 'make test-golden', passed: 0, failed: 0, residual_arcsec: null}
+  - {cmd: 'pytest -m "not solver"', passed: 5, failed: 0}
+  - {cmd: 'scripts/_smoke_solve.py (S0 @solver gate — formal golden e2e is S7)', passed: 1, failed: 0, residual_arcsec: 14.2}
 plan_file: ~/.claude/plans/lucky-dazzling-parasol.md
 plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []
 next_action: >-
-  BUILD S0 (Sprint 0 of the approved plan) via /tdd-harness. Cut feat/S0 off main.
-  Scope = scaffold + venv-gate + plate-solver gate (see design brief below). Index-fetch
-  failure is a HARD HALT per Andon §4.2 #4 — do NOT proceed to S1. S0's executable gate is
-  the smoke solve (AC-0.5) yielding an astropy-loadable WCS.
+  S1 (Sprint 1: scene + frozen real-data fixtures) is the next rung. Next tick opens FRESH ->
+  GENBA -> RESEARCH (ABBREVIATE: confirm CelesTrak gp.php + Gaia TAP reachable; Gaia needs the
+  certifi CA fix — reuse the pattern in scripts/_smoke_solve.py) -> IDEATE (SKIP, S1 fully specified
+  in the plan) -> PLAN (JIT shortcut: consume the approved plan, same SHA) -> end
+  PLAN_LOCKED_AWAITING_BUILD.
 human_gate: false
-tick_lock: {pid: 84322, started: 2026-06-17T10:45:08+0800}
+tick_lock: null
 
-# --- bootstrap note (this FRESH tick created the repo + this state file) ---
-# last_green_sha is null because no milestone is green yet (M0 not reached).
-# The §3.5 clean-tree/SHA gate for the NEXT (BUILD) tick is satisfied by ALL of:
-#   (1) `git status --porcelain` empty (clean tree), AND
-#   (2) status == PLAN_LOCKED_AWAITING_BUILD, AND
-#   (3) main has exactly ONE commit (the bootstrap commit) and HEAD points at it
-#       — verify with `git -C ~/tracklet log --oneline` (single line) before building.
-# If any foreign commit/dirty file appears, Andon-halt (§4) instead of building.
+# --- post-S0 note (read before the next BUILD tick's §3.5 gate) ---
+# S0 merged GREEN at last_green_sha f87fc9b (`git log` shows the --no-ff merge). main HEAD after
+# this tick is the bookkeeping commit ONE PAST f87fc9b — this is the expected post-integration
+# state, NOT a §3.5 anomaly (a FRESH planning tick does not build, so no HEAD==last_green_sha gate
+# fires this tick). The S1 BUILD tick will branch feat/S1 off main's then-HEAD and record its own
+# expected post-plan commit. Out-of-repo S0 footprint (per README): brew astrometry-net, ~335MB in
+# ~/tracklet/indexes (gitignored), and one add_path line in /opt/homebrew/etc/astrometry.cfg.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -88,3 +88,9 @@ brainstorm→judge panel here would be Muda). Pre-Mortem guard checked manually,
   (c) shatters no signed contract — no module built;
   (d) no speculative scope — scope == Sprint 0 verbatim.
 ```
+
+- [tick 2 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for S0; verify §3.5 gates + env feasibility before a long system-mutating build. → Action(Read state; git status/log/HEAD; re-hash plan; probe brew/python/solve-field/network) → Observation: clean tree @ bootstrap 0033462, plan SHA matches, no_progress 0, tick_lock null; env feasible (brew + py3.14.4 + py3.12 present; data.astrometry.net / PyPI / CelesTrak all HTTP 200). Cut feat/S0.
+- [tick 2 | BUILD] Thought: /tdd-harness PREFLIGHT cannot run for S0 — it requires a working test runner, which S0 itself creates (chicken-egg / Andon). Build S0 under the inner test-driven-development discipline + konnyaku directly; /tdd-harness resumes from S1. → Action(scaffold 24 files; venv on py3.14 — ALL cp314 wheels resolved, no 3.12 fallback needed; TDD the version guard RED→GREEN; pin requirements.lock; brew install astrometry-net; install_indexes.sh fetched 4107–4113 ~335MB + wired astrometry.cfg; _smoke_solve.py real-Gaia xylist blind solve) → Observation: AC 0.1–0.6 all green; 5/5 non-solver tests; smoke blind-solve PASS @14.2"; decisively re-confirmed solving ONLY our indexes (Cellar data dir empty). Commits 87b219a..135281d.
+- [tick 2 | REVIEW] Thought: large diff (>8 files) → fresh-context adversarial LOCAL review (no cloud, §6). → Action(spawn general-purpose reviewer over `git diff main..feat/S0`) → Observation: VERDICT ACCEPT_WITH_NOTES; sealed-truth provably preserved, guard non-tautologically tested (reviewer neutered the guard → test failed), install_indexes.sh fail-closed verified. Dispositioned — FIXED: pythonpath=[src] (verified bare pytest 5/5 with tracklet uninstalled), requires-python >=3.14,<3.15, smoke offset-gate <60", smoke TemporaryDirectory cleanup + Gaia retry-resilience; REJECTED w/ rationale: committed tick_lock (loop's required memory; cleared this tick) + cfg-write NIT (set -e already fails loud). Re-smoke PASS @14.2". Fix commit 46c6d33.
+- [tick 2 | INTEGRATE] Thought: PHASE-5 gate met (every finding dispositioned + non-solver suite green + smoke green) → integrate. → Action(git merge --no-ff feat/S0 → main; pytest; delete feat/S0) → Observation: merged @ f87fc9b (S0 green here); 5/5 green on main; branch deleted. S0 ≠ a milestone (M0 needs S0–S7) → no tag.
+- [tick 2 | HANSEI] What worked: backgrounding the long poles (venv install + 340MB index fetch) while scaffolding in parallel kept the tick flowing; genchi-genbutsu probes (Cellar-empty check, `--config`-only re-solve, the SSL diagnosis) each caught a real trap before it bit (spurious-pass risk; env-SSL). py3.14 carried every cp314 wheel → no 3.12 fallback. Surprises/Muda: (1) /tdd-harness cannot preflight the increment that creates its own test runner — S0 is inherently pre-harness; (2) python.org stdlib ssl ships no CA bundle → Gaia TLS failed until pointed at certifi; (3) the Gaia archive is flaky (one ConnectionReset) → added retry. KAIZEN for next tick: S1's fetch_fixtures hits the SAME Gaia SSL + flakiness — reuse the certifi-CA + retry pattern from scripts/_smoke_solve.py from the start rather than rediscovering it. Loop-doc kaizen: S0 builds via direct TDD (not /tdd-harness); the harness applies from S1 onward once a test runner exists.
