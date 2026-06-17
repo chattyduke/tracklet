@@ -2,6 +2,7 @@
 .venv/
 out/
 indexes/
+astap/
 *.fits
 
 # Python

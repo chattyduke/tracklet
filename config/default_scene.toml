@@ -1,0 +1,33 @@
+# Default synthetic scene — built from REAL public data (Gaia DR3 stars + a real ISS TLE).
+# Consumed by scene.build_scene (S1). Truth is known by construction; the golden e2e test
+# asserts the recovered residual is under threshold.
+
+[satellite]
+name = "ISS (ZARYA)"
+catnr = 25544          # CelesTrak CATNR for the ISS
+
+[observation]
+# Fixed UTC epoch + exposure so the render is deterministic and reproducible offline.
+utc = "2026-06-01T14:00:00Z"
+exposure_s = 2.0
+
+[observer]            # Perth, Western Australia
+lat_deg = -31.95
+lon_deg = 115.86
+elev_m = 10.0
+
+[camera]
+width_px = 2048
+height_px = 2048
+pixel_scale_arcsec = 5.0    # ~2.8 deg field across 2048 px (W * scale ~= FOV)
+center_ra_deg = 0.0         # placeholder; S1 sets the pointing from the scene geometry
+center_dec_deg = 0.0
+fov_deg = 2.844             # 2048 * 5.0 / 3600
+
+[noise]
+psf_sigma_px = 1.5
+read_noise_e = 5.0
+gaia_mag_limit = 14.0
+
+[rng]
+seed = 20260601

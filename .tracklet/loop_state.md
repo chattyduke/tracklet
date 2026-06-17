@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S0 environment + plate-solver gate"
 last_increment_id: null
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: null
 green_suites:
@@ -18,7 +18,7 @@ next_action: >-
   failure is a HARD HALT per Andon §4.2 #4 — do NOT proceed to S1. S0's executable gate is
   the smoke solve (AC-0.5) yielding an astropy-loadable WCS.
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 84322, started: 2026-06-17T10:45:08+0800}
 
 # --- bootstrap note (this FRESH tick created the repo + this state file) ---
 # last_green_sha is null because no milestone is green yet (M0 not reached).
