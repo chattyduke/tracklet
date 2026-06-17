@@ -167,3 +167,46 @@ def test_pure_noise_frame_returns_solvefailure_not_raise(scene, tmp_path):
         f"pure-noise frame must RETURN a SolveFailure, got {result!r}"
     )
     assert result.reason, "SolveFailure must carry a non-empty reason string"
+
+
+# ---------------------------------------------------------------------------
+# S6 carried-fix (NON-solver) — a MALFORMED scale_hint must RETURN a typed SolveFailure, not raise.
+#
+# _scale_bounds previously raised KeyError on a dict missing fov_deg/low/high (and ValueError /
+# TypeError on a non-numeric hint), so a caller-side mistake surfaced as a stack trace rather than
+# the contract's honest typed failure. The fix validates the hint up front and returns a
+# SolveFailure whose reason names the bad hint — deterministic and solver-independent (it must NOT
+# need solve-field on PATH), so this runs under `pytest -m "not solver"`.
+# ---------------------------------------------------------------------------
+
+
+def test_malformed_scale_hint_dict_returns_solvefailure_not_raise():
+    """A dict missing fov_deg / low / high -> typed SolveFailure (NOT a KeyError stack trace)."""
+    result = solve_pointing("anything.fits", {"bad_key": 1})
+    assert isinstance(result, SolveFailure), (
+        f"malformed scale_hint must RETURN a SolveFailure, got {result!r}"
+    )
+    assert result.reason, "SolveFailure must carry a non-empty reason string"
+    assert "hint" in result.reason.lower(), (
+        f"reason should name the bad scale hint, got {result.reason!r}"
+    )
+
+
+def test_non_numeric_scale_hint_returns_solvefailure_not_raise():
+    """A non-numeric hint (un-floatable) -> typed SolveFailure, never raised."""
+    result = solve_pointing("anything.fits", "not-a-number")
+    assert isinstance(result, SolveFailure), (
+        f"non-numeric scale_hint must RETURN a SolveFailure, got {result!r}"
+    )
+    assert "hint" in result.reason.lower(), (
+        f"reason should name the bad scale hint, got {result.reason!r}"
+    )
+
+
+def test_non_numeric_fov_deg_value_returns_solvefailure_not_raise():
+    """A dict with a non-numeric fov_deg value -> typed SolveFailure, never raised."""
+    result = solve_pointing("anything.fits", {"fov_deg": "wide"})
+    assert isinstance(result, SolveFailure), (
+        f"non-numeric fov_deg must RETURN a SolveFailure, got {result!r}"
+    )
+    assert "hint" in result.reason.lower(), result.reason
