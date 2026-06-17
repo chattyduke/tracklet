@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S2 render (synthetic scene + sealed truth)"
 last_increment_id: "S1 scene + frozen real-data fixtures"
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 274624fd336e3aa6c2e691a97f69efd4d7ba6727
 green_suites:
@@ -25,7 +25,7 @@ next_action: >-
   truth.json writer + WCS math) → MANDATORY second independent LOCAL review pass over git diff
   main..feat/S2 (NEVER /code-review ultra). Merge on green + all dispositioned. Use ~/tracklet/.venv/bin/python.
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 97720, started: 2026-06-17T14:10:23+0800}
 
 # --- post-S2-plan note (read before the S2 BUILD tick's §3.5 gate) ---
 # S2 plan LOCKED this tick (FRESH → PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan
