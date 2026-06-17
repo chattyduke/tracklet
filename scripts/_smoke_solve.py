@@ -50,6 +50,8 @@ def build_true_wcs() -> WCS:
 
 
 def get_gaia_stars():
+    import time
+
     from astroquery.gaia import Gaia
 
     Gaia.ROW_LIMIT = 3000
@@ -59,8 +61,18 @@ def get_gaia_stars():
         f"WHERE 1=CONTAINS(POINT('ICRS',ra,dec),CIRCLE('ICRS',{CENTER_RA},{CENTER_DEC},{radius})) "
         "AND phot_g_mean_mag < 12 ORDER BY phot_g_mean_mag ASC"
     )
-    r = Gaia.launch_job_async(adql).get_results()
-    return np.asarray(r["ra"]), np.asarray(r["dec"]), np.asarray(r["phot_g_mean_mag"])
+    # The Gaia archive is documented-unstable (resets / timeouts under load) — retry transient errors
+    # with backoff so the smoke (and a stranger reproducing) isn't defeated by archive flakiness.
+    last = None
+    for attempt in range(1, 4):
+        try:
+            r = Gaia.launch_job_async(adql).get_results()
+            return np.asarray(r["ra"]), np.asarray(r["dec"]), np.asarray(r["phot_g_mean_mag"])
+        except Exception as exc:  # noqa: BLE001 — transient archive errors are varied
+            last = exc
+            print(f"  Gaia query attempt {attempt}/3 failed ({type(exc).__name__}); retrying...")
+            time.sleep(5 * attempt)
+    raise RuntimeError(f"Gaia query failed after 3 attempts: {last}")
 
 
 def main() -> int:
@@ -78,35 +90,42 @@ def main() -> int:
     order = np.argsort(-flux)
     x, y, flux = x[order], y[order], flux[order]
 
-    tmp = tempfile.mkdtemp(prefix="tracklet_smoke_")
-    xyl = os.path.join(tmp, "field.xyls")
-    fits.BinTableHDU.from_columns([
-        fits.Column(name="X", format="E", array=x.astype("float32")),
-        fits.Column(name="Y", format="E", array=y.astype("float32")),
-        fits.Column(name="FLUX", format="E", array=flux.astype("float32")),
-    ]).writeto(xyl, overwrite=True)
+    with tempfile.TemporaryDirectory(prefix="tracklet_smoke_") as tmp:
+        xyl = os.path.join(tmp, "field.xyls")
+        fits.BinTableHDU.from_columns([
+            fits.Column(name="X", format="E", array=x.astype("float32")),
+            fits.Column(name="Y", format="E", array=y.astype("float32")),
+            fits.Column(name="FLUX", format="E", array=flux.astype("float32")),
+        ]).writeto(xyl, overwrite=True)
 
-    cmd = [
-        "solve-field", "--overwrite", "--no-plots",
-        "--x-column", "X", "--y-column", "Y", "--sort-column", "FLUX",
-        "--width", str(W), "--height", str(H),
-        "--scale-units", "degwidth", "--scale-low", "2.0", "--scale-high", "3.6",
-        xyl,
-    ]
-    print("blind-solving the real-star xylist ...")
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-    wcs_path = os.path.join(tmp, "field.wcs")
-    if not os.path.exists(wcs_path):
-        sys.stderr.write(p.stdout[-2500:] + "\n" + p.stderr[-1500:] + "\n")
-        print("SMOKE_FAIL: solve-field produced no .wcs")
-        return 1
+        cmd = [
+            "solve-field", "--overwrite", "--no-plots",
+            "--x-column", "X", "--y-column", "Y", "--sort-column", "FLUX",
+            "--width", str(W), "--height", str(H),
+            "--scale-units", "degwidth", "--scale-low", "2.0", "--scale-high", "3.6",
+            xyl,
+        ]
+        print("blind-solving the real-star xylist ...")
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        wcs_path = os.path.join(tmp, "field.wcs")
+        if not os.path.exists(wcs_path):
+            sys.stderr.write(p.stdout[-2500:] + "\n" + p.stderr[-1500:] + "\n")
+            print("SMOKE_FAIL: solve-field produced no .wcs")
+            return 1
+        rec = WCS(wcs_path)
+        cra, cdec = rec.wcs_pix2world(W / 2, H / 2, 0)
 
-    rec = WCS(wcs_path)
-    cra, cdec = rec.wcs_pix2world(W / 2, H / 2, 0)
     sep = SkyCoord(float(cra) * u.deg, float(cdec) * u.deg).separation(
         SkyCoord(CENTER_RA * u.deg, CENTER_DEC * u.deg)
     ).arcsec
-    print(f"SMOKE_PASS: blind solve OK; WCS loads in astropy; recovered-center offset {sep:.1f}\"")
+    # A correct blind solve recovers the TRUE center to well within this; a spurious wrong-asterism
+    # solve can still emit a loadable .wcs, so gate the pass on the offset (Poka-Yoke, not just "it loads").
+    max_offset = 60.0
+    if sep > max_offset:
+        print(f'SMOKE_FAIL: WCS loaded but recovered-center offset {sep:.1f}" exceeds {max_offset:.0f}" '
+              "(likely a spurious / wrong-asterism solve)")
+        return 1
+    print(f'SMOKE_PASS: blind solve OK; WCS loads; recovered-center offset {sep:.1f}" (< {max_offset:.0f}")')
     return 0
 
 

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Optical Space-Domain-Awareness atomic proof: sky image -> plate-solve -> streak detection -> position measurement -> arcsecond residual vs known truth."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.12"
+requires-python = ">=3.14,<3.15"  # mirrors the runtime minor-guard in tracklet._env (validated env)
 authors = [{ name = "Sam Leishman" }]
 dependencies = [
   "numpy",
@@ -30,6 +30,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]   # so a stranger's bare `pytest` from a clone resolves tracklet without the editable install
 addopts = "-ra"
 markers = [
   "solver: requires solve-field + astrometry.net index files installed (S3 / S6 happy-paths + golden e2e). Excluded by `pytest -m \"not solver\"`.",
