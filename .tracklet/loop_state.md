@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S1 scene + frozen real-data fixtures"
 last_increment_id: "S0 environment + plate-solver gate"
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: f87fc9bc6cab4efedbb47bc2285f8173f9ae4944
 green_suites:
@@ -24,7 +24,7 @@ next_action: >-
   ACs 1.1-1.3 are the contract. Sealed-truth untouched (scene defines the scene; fetch writes fixtures,
   not truth).
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 91306, started: 2026-06-17T12:15:40+0800}
 
 # --- post-S1-plan note (read before the S1 BUILD tick's §3.5 gate) ---
 # S0 is green at last_green_sha f87fc9b. main HEAD is now the S1 plan-lock commit (this tick), a few
