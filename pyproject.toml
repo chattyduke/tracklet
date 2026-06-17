@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tracklet"
+version = "0.1.0"
+description = "Optical Space-Domain-Awareness atomic proof: sky image -> plate-solve -> streak detection -> position measurement -> arcsecond residual vs known truth."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+authors = [{ name = "Sam Leishman" }]
+dependencies = [
+  "numpy",
+  "scipy",
+  "astropy",
+  "astroquery",
+  "skyfield",
+  "opencv-python",
+  "scikit-image",
+  "matplotlib",
+  "photutils",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "solver: requires solve-field + astrometry.net index files installed (S3 / S6 happy-paths + golden e2e). Excluded by `pytest -m \"not solver\"`.",
+  "slow: long-running test",
+]
