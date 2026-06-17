@@ -8,6 +8,9 @@ from __future__ import annotations
 
 
 def main(argv: "list[str] | None" = None) -> int:
+    from tracklet._env import assert_supported_python
+
+    assert_supported_python()  # runtime guard: wrong Python minor fails loud before anything else
     raise NotImplementedError("run.main lands in Sprint 6")
 
 
