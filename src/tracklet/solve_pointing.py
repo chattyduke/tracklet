@@ -73,18 +73,38 @@ class SolveFailure:
     stdout_tail: str = ""
 
 
+class _BadScaleHint(ValueError):
+    """A malformed scale_hint. Raised internally by ``_scale_bounds``; ``solve_pointing`` catches it
+    and converts it to a typed ``SolveFailure`` so a caller-side mistake is an HONEST no-solve, not a
+    stack trace. (Subclasses ValueError so the existing valid-hint contract is unchanged.)"""
+
+
 def _scale_bounds(scale_hint) -> tuple[float, float]:
     """Derive (low, high) degwidth scale bounds from the scale hint (camera fov_deg).
 
     Accepts a mapping with ``fov_deg`` (or ``low``/``high`` directly) or a bare numeric fov. The
     bounds bracket the plate scale only; they carry NO sky position, so the solve stays blind.
+
+    A malformed hint (a dict missing ``fov_deg``/``low``/``high``, or any non-numeric value) raises
+    ``_BadScaleHint`` — never a bare ``KeyError``/``TypeError`` — so ``solve_pointing`` can turn it
+    into a typed ``SolveFailure`` whose reason names the bad hint. VALID hints are byte-unchanged.
     """
-    if isinstance(scale_hint, dict):
-        if "low" in scale_hint and "high" in scale_hint:
-            return float(scale_hint["low"]), float(scale_hint["high"])
-        fov = float(scale_hint["fov_deg"])
-    else:
-        fov = float(scale_hint)
+    try:
+        if isinstance(scale_hint, dict):
+            if "low" in scale_hint and "high" in scale_hint:
+                return float(scale_hint["low"]), float(scale_hint["high"])
+            if "fov_deg" not in scale_hint:
+                raise _BadScaleHint(
+                    f"scale hint dict must carry 'fov_deg' or both 'low'/'high'; got keys "
+                    f"{sorted(scale_hint)}"
+                )
+            fov = float(scale_hint["fov_deg"])
+        else:
+            fov = float(scale_hint)
+    except _BadScaleHint:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise _BadScaleHint(f"scale hint is not numeric: {scale_hint!r} ({exc})") from exc
     return fov * (1.0 - _SCALE_MARGIN_FRAC), fov * (1.0 + _SCALE_MARGIN_FRAC)
 
 
@@ -109,11 +129,17 @@ def solve_pointing(image_path: str, scale_hint) -> "SolveResult | SolveFailure":
         ``SolveResult`` carrying the recovered ``astropy.wcs.WCS`` on a converged solve; otherwise a
         ``SolveFailure`` with a reason string. Never raises on a no-solve.
     """
+    # Validate the scale hint FIRST so a malformed hint is an HONEST typed SolveFailure regardless of
+    # whether solve-field is installed (deterministic + solver-independent — runs under -m "not solver").
+    try:
+        low, high = _scale_bounds(scale_hint)
+    except _BadScaleHint as exc:
+        return SolveFailure(reason=f"invalid scale hint: {exc}")
+
     solve_field = shutil.which("solve-field")
     if solve_field is None:
         return SolveFailure(reason="solve-field binary not found on PATH")
 
-    low, high = _scale_bounds(scale_hint)
     src = Path(image_path)
     if not src.exists():
         return SolveFailure(reason=f"image not found: {image_path}")
