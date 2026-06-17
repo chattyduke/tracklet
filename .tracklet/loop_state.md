@@ -1,84 +1,41 @@
 ---
 current_milestone: M0
-current_increment: "S1 scene + frozen real-data fixtures"
-last_increment_id: "S0 environment + plate-solver gate"
-phase: BUILD
-status: FIX_AWAITING_BUILD
-last_green_sha: f87fc9bc6cab4efedbb47bc2285f8173f9ae4944
+current_increment: "S2 render (synthetic scene + sealed truth)"
+last_increment_id: "S1 scene + frozen real-data fixtures"
+phase: HANSEI
+status: FRESH
+last_green_sha: 274624fd336e3aa6c2e691a97f69efd4d7ba6727
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 5, failed: 0}
+  - {cmd: 'pytest -m "not solver"', passed: 41, failed: 0}
   - {cmd: 'scripts/_smoke_solve.py (S0 @solver gate — formal golden e2e is S7)', passed: 1, failed: 0, residual_arcsec: 14.2}
 plan_file: ~/.claude/plans/lucky-dazzling-parasol.md
 plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
-no_progress_count: 1
-open_findings:
-  - id: F1
-    sev: major
-    note: >-
-      ISS at altitude -84.7 deg (far side of Earth) at the configured obs UTC 2026-06-01T14:00Z —
-      camera points at an un-observable target. FIX: resolve obs_utc to a real visible pass
-      (ISS altitude > ~20 deg over Perth) near the TLE epoch, and add a FAIL-CLOSED altitude
-      assertion in fetch_fixtures.resolve_pointing so a below-horizon scene can never be frozen.
-    phase: REVIEW
-  - id: F2
-    sev: major
-    note: >-
-      TLE epoch 2026-06-16 was propagated 15.3 days BACK to the obs time -> SGP4 LEO accuracy is
-      fiction. FIX: set obs_utc within ~1 day of the TLE epoch (folds into F1 — pick a visible pass
-      near the epoch).
-    phase: REVIEW
-  - id: F3
-    sev: major
-    note: >-
-      Gaia cone radius CONE_RADIUS_DEG=1.6 < field half-diagonal 2.011 deg -> the 2048^2 frame
-      corners are STARLESS and the radius comment is wrong. FIX: radius >= ~2.1 deg (half-diagonal +
-      margin), fix the comment, re-fetch the cone.
-    phase: REVIEW
-  - id: F4
-    sev: minor
-    note: >-
-      "idempotent" overstated: re-fetch at a drifted center/date ORPHANS the old fixture, and
-      default_catalogue_path/default_tle_path select sorted()[-1] (lexicographic) which can mismatch
-      the config center. FIX: fetch_fixtures cleans old fixtures (keep one set) and/or default_*_path
-      selects the fixture matching the config center.
-    phase: REVIEW
-  - id: F5
-    sev: minor
-    note: >-
-      negative-coordinate filename mangle .replace('-','m') runs over the whole string; works only
-      because RA>=0. Tighten (mangle the dec part only) OR reject (moot once F4 enforces a single
-      committed fixture set).
-    phase: REVIEW
-  - id: F6
-    sev: nit
-    note: >-
-      REJECTED with rationale: the ascii.read comment-marker would only drop a data row beginning
-      with '#', which a numeric Gaia CSV can never produce; reviewer deemed it acceptable. No action.
-    phase: REVIEW
+no_progress_count: 0
+open_findings: []  # all S1 review findings dispositioned at tick 5 (F1-F5 fixed + independently verified, F6 rejected)
 next_action: >-
-  FIX S1 — re-enter BUILD on the EXISTING branch feat/S1 (do NOT cut a new branch; it already holds the
-  S1 build at HEAD). Disposition every open_findings entry: F1+F2 (resolve obs_utc to a REAL visible ISS
-  pass — altitude > ~20 deg over Perth — near the TLE epoch, + add a fail-closed altitude assertion in
-  fetch_fixtures.resolve_pointing), F3 (Gaia cone radius >= ~2.1 deg + fix the comment), F4 (single
-  committed fixture set and/or config-matched default_*_path), F5 (tighten or reject), F6 (already
-  rejected). Real fixes via TDD (failing test first). Re-run fetch ONCE to regenerate the frozen fixtures
-  + config (new obs_utc + center + wider cone) and re-commit. Then RE-REVIEW (fresh-context local agent
-  over `git diff main..feat/S1`): every finding fixed-and-green or rejected-with-rationale AND full
-  non-solver suite green -> merge feat/S1 -> main (--no-ff) + INTEGRATE. Use ~/tracklet/.venv/bin/python.
-  If the re-review bounces AGAIN, no_progress hits 2 -> human gate at next tick start (§3.3).
+  S2 (Sprint 2: render — synthetic scene + SEALED truth) is the next rung and the HIGHEST-STAKES
+  increment for the sealed-truth invariant: render_scene is the SOLE writer of truth.json AND must write
+  image.fits with NO WCS header (clean FITS). Next tick opens FRESH -> GENBA -> RESEARCH (SKIP — pure
+  construction over the frozen fixtures, no external unknown) -> IDEATE (JUDGE at the tick: S2 has real
+  design content — TAN WCS w/ negative CD1_1 + wcs_world2pix, Gaussian-PSF star projection, Skyfield
+  streak at exposure start/mid/end, Poisson+read noise, AND the sealed-truth write boundary — this MAY
+  warrant a brief design brief rather than a pure SKIP) -> PLAN (JIT shortcut: S2 fully specified as
+  Sprint 2 in the approved plan, same SHA; lock + end at ExitPlanMode). Build S2 (tick after) to the seal
+  from the first commit: solving modules' signatures take image_path/wcs only; truth.json written ONLY by
+  render; the WCS round-trip (Y-flip / CD-sign / origin) gets explicit unit tests (plan Sprint 2 ACs
+  2.1-2.5). Use ~/tracklet/.venv/bin/python.
 human_gate: false
-tick_lock: {pid: 92116, started: 2026-06-17T13:00:16+0800}
+tick_lock: null
 
-# --- post-S1-REVIEW-bounce note (read before the FIX tick) ---
-# S1 was BUILT on feat/S1 (30/30 non-solver green) but the adversarial review returned REVISE: the
-# scene is physically incoherent (ISS below horizon at the obs time, 15-day TLE back-propagation,
-# starless field corners). NOT merged. The CURRENT BRANCH IS feat/S1 (HEAD = the S1 build + this bounce
-# state commit); main is still at d14a620 / last_green_sha f87fc9b (S0). The FIX tick: GENBA on feat/S1
-# (NOT main), status FIX_AWAITING_BUILD -> re-enter BUILD on feat/S1 (do NOT re-branch), fix the
-# open_findings via TDD, re-fetch, re-review, then merge feat/S1 -> main. §3.5 for the FIX tick: tree is
-# clean on feat/S1; the build + bounce commits are loop/Generator-authored — expected, not an anomaly.
-# anti-spin: this review-bounce was a non-green/non-plan-lock tick -> no_progress_count 0->1; the FIX
-# tick MUST land green (merge) or no_progress hits 2 and pauses for human.
+# --- post-S1 note (read before the next PLAN/BUILD tick) ---
+# S1 merged GREEN at last_green_sha 274624f (--no-ff). main HEAD after this tick is the bookkeeping
+# commit one past 274624f — expected post-integration state, NOT a §3.5 anomaly (a FRESH planning tick
+# does not build). Scene is now physically coherent (the tick-4 review caught it; the tick-5 FIX +
+# re-review ACCEPTed): ISS at alt 73.1 deg over Perth, 0.49 d from the TLE epoch, 2.1 deg cone / 8821
+# Gaia stars covering the 2.84 deg field; obs_utc=2026-06-17T08:36:12Z, center=(133.860, -42.593).
+# SEALED-TRUTH WATCH for S2: render is the ONLY truth.json writer AND image.fits must be WCS-FREE — the
+# formal seal tests are S7, but build S2 to the seal from the first commit. Carried kaizen still live:
+# Gaia needs certifi-CA + retry (already in fetch_fixtures.py) for any future fetch.
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -206,3 +163,9 @@ all four clear: (a) re-invents nothing (scene/fetch are empty stubs); (b) sealed
 - [tick 4 | BUILD] Thought: S0 created the test runner → build S1 under TDD via a spawned Generator (parent stays lean). → Action(spawn general-purpose Generator on feat/S1: implement scene.py + fetch_fixtures.py, resolve pointing via skyfield, fetch+commit frozen fixtures, TDD ACs 1.1-1.3) → Observation: Generator DONE — 6 commits (RED→GREEN×2 + freeze + refactor) 30aa0ab..39cb52d; scene.py + fetch_fixtures.py + config(center resolved RA35.528/Dec26.548) + tests/test_scene.py + tests/test_fetch_fixtures.py + data/{tle,catalogue} fixtures (1500-star Gaia cone). INDEPENDENTLY VERIFIED by parent: 30/30 non-solver green, tree clean, scope held (no foreign module edits), sealed-truth grep clean (only docstrings).
 - [tick 4 | REVIEW] Thought: real product behavior + a pointing sub-decision adjacent to sealed-truth → fresh-context adversarial review (free, local). → Action(spawn general-purpose reviewer over `git diff main..feat/S1`) → Observation: VERDICT REVISE. Sealed-truth NON-CIRCULARITY SURVIVES (clean — config center is public pointing, not truth; measure reads only the solved WCS); tests honest (identity probe: neutering _validate fails 7 tests). But 3 MAJOR physical-validity defects → F1 (ISS alt −84.7° = far side of Earth at obs time), F2 (TLE propagated 15.3 d back from epoch → SGP4 fiction), F3 (Gaia cone 1.6° < field half-diagonal 2.011° → starless corners); + F4/F5 MINOR; F6 NIT rejected. GATE = REVISE → NOT mergeable; bounce to FIX_AWAITING_BUILD per §3.2.
 - [tick 4 | HANSEI] What worked: the spawned-Generator build kept the parent lean (~110K tok of build returned one compact report); and the FRESH-CONTEXT REVIEW EARNED ITS KEEP — it caught a physical-validity defect (satellite below the horizon) that ALL 30 tests passed straight through, because the tests never asserted observability. Textbook proof that green-under-its-own-tests is necessary, not sufficient. Root cause (muda): the obs UTC was an S0 config placeholder never sanity-checked against the ISS geometry; the Generator faithfully built to a physically-incoherent config. KAIZEN (FIX tick): resolve obs_utc to a REAL visible pass (ISS altitude >~20° over Perth) near the TLE epoch, and make satellite-above-horizon + TLE-epoch-proximity a FAIL-CLOSED VALIDATION POKA-YOKE in resolve_pointing, so a nonsensical scene can never be frozen again. Anti-spin (§3.3): this build tick bounced (no merge, no plan-lock) → no_progress_count 0→1; the FIX tick MUST merge green to reset (a second consecutive non-green tick trips the human gate).
+
+- [tick 5 | GENBA] Thought: status FIX_AWAITING_BUILD on feat/S1, no_progress 1; verify gates + baseline before fixing. → Action(Read state + 6 findings; git branch/HEAD/clean; plan SHA; baseline pytest) → Observation: on feat/S1 @ a4bbe01, clean, main @ d14a620, only feat/S1 live (branch hygiene OK), plan SHA matches, baseline 30/30 green (findings are physical-validity, not red). Marked tick live (d4e31aa).
+- [tick 5 | BUILD] Thought: §3.2 FIX → re-enter BUILD on feat/S1, fix the 6 open_findings via TDD, NO re-research (Muda guard). → Action(spawn general-purpose Generator on feat/S1: resolve a real visible ISS pass + fail-closed altitude Poka-Yoke (F1+F2), widen cone ≥2.1° (F3), single-fixture cleanup + config-matched path (F4), dec-only mangle (F5), confirm F6 rejected; re-fetch + re-commit) → Observation: Generator DONE — 2 commits (RED 11 tests 3700ec3, GREEN impl c2b7bb1); obs_utc→2026-06-17T08:36:12Z (ISS alt 73.1° over Perth, 0.49 d from epoch), center (133.86,-42.59), cone 2.1°/8821 stars, single fixture set. INDEPENDENTLY VERIFIED by parent: 41/41 green, skyfield re-propagation gives ISS alt 73.14° + |obs-epoch| 0.49 d, scope clean, sealed-truth clean.
+- [tick 5 | REVIEW] Thought: a FIX must clear a fresh adversarial RE-review before merge. → Action(spawn general-purpose reviewer over `git diff main..feat/S1`) → Observation: VERDICT ACCEPT. All 6 prior findings independently re-verified FIXED (F1 alt-Poka-Yoke fails closed @20° + below-horizon test raises, F2 |obs-epoch|<1d gate, F3 corners covered via real TAN-WCS projection, F4 single fixture + config-matched path, F5 dec-only mangle, F6 rejected); no new BLOCKER/MAJOR (1 NIT: filename 3dp rounding — REJECTED w/ rationale, benign under single-fixture); determinism holds (pointing from fixed config utc; now() only in provenance), sealed-truth intact, tests honest (mutation-probed). 41/41 green.
+- [tick 5 | INTEGRATE] Thought: gate passed (all dispositioned + suite green) → integrate. → Action(merge --no-ff feat/S1→main; pytest; delete feat/S1) → Observation: merged @ 274624f; 41/41 non-solver green on main; branch deleted. S1 ≠ a milestone → no tag. no_progress_count 1→0 (green increment landed).
+- [tick 5 | HANSEI] What worked: the bounce was FULLY RECOVERED in ONE FIX tick — the Generator fixed all 6 findings, a fresh RE-review ACCEPTed, and an independent skyfield check confirmed the ISS is now at +73.14° (was −84.7°). The loop's bounce→fix→re-review cycle did exactly its job: a real physical-validity defect was caught (tick 4), fixed + verified (tick 5), never papered over, never merged on the incoherent scene. Muda avoided: did NOT re-run research/ideation for the fix (§3.2 guard) — straight to BUILD on the same branch. KAIZEN (S2): render is the FIRST sealed-truth writer + the most complex module — at the S2 PLAN tick JUDGE whether its design content (TAN WCS / PSF / streak / noise / seal boundary) warrants a brief design brief vs a pure SKIP, and build to the seal (truth.json written only by render; image.fits WCS-free) from the first commit. Anti-spin: green merge → no_progress reset to 0.
