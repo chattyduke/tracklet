@@ -1,47 +1,46 @@
 ---
 current_milestone: M0
-current_increment: "S3 solve_pointing (blind plate-solve)"
-last_increment_id: "S2 render (synthetic scene + sealed truth)"
-phase: BUILD
-status: PLAN_LOCKED_AWAITING_BUILD
-last_green_sha: 6815c325950c1767486557c29d67e17111f9edd5
+current_increment: "S4 detect_streak (Canny+Hough -> midpoint)"
+last_increment_id: "S3 solve_pointing (blind plate-solve)"
+phase: HANSEI
+status: FRESH
+last_green_sha: a4663ab2cd2ed4d2113455909d9b8c1ade63d80b
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 60, failed: 0}
-  - {cmd: 'scripts/_smoke_solve.py (S0 @solver gate — formal golden e2e is S7)', passed: 1, failed: 0, residual_arcsec: 14.2}
+  - {cmd: 'pytest -m "not solver"', passed: 62, failed: 0}
+  - {cmd: 'pytest -m solver', passed: 2, failed: 0, note: 'AC 3.1 blind solve recovered-vs-true 2.0 arcsec worst (tol 10); AC 3.2 SolveFailure on noise frame'}
 plan_file: ~/.claude/plans/lucky-dazzling-parasol.md
 plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
-open_findings: []  # S2 review (mandatory 2nd pass) ACCEPT @ tick 7; 2 NITs rejected-for-S2; streak-brightness carried as an S3 watch-item (see next_action + tick-7 hansei)
+open_findings: []  # S3 review (mandatory 2nd pass) ACCEPT_WITH_NOTES @ tick 9; 1 MINOR (malformed scale_hint raises KeyError, not SolveFailure) rejected-for-S3 + CARRIED as an S6 run.py watch-item (see post-S3 note)
 next_action: >-
-  BUILD S3 (Sprint 3: solve_pointing — blind plate-solve) — the locked design brief is at the bottom of this
-  file (tick 8). Cut feat/S3 off main. Implement src/tracklet/solve_pointing.py
-  solve_pointing(image_path, scale_hint) -> SolveResult|SolveFailure via /tdd-harness or a spawned Generator:
-  headless BLIND solve-field (--scale-units degwidth --scale-low/high from fov_deg, --downsample 2 --no-plots
-  --overwrite, NO --ra/--dec seed), parse .wcs -> astropy WCS, SolveFailure (NOT exception) on no-solve, reads
-  NO truth (signature image_path+scale_hint only). @solver ACs run with ~/tracklet/.venv/bin/python: 3.1 render
-  the golden frame (render_scene) -> REAL blind solve -> recovered WCS ≈ true WCS (reads truth) within tolerance;
-  3.2 SolveFailure RETURNED on a pure-noise frame; 3.3 signature has no truth path. EMPIRICAL GATE (carried
-  watch-item): the streak peak ~162k e is bright + render.py _STREAK_PEAK_E=8e3 misdescribes it. IF AC 3.1 solves
-  correctly as-is -> just make that constant/docstring honest (tidy). IF the streak perturbs the solve -> mitigate
-  IN ORDER per plan Sprint 3: cap streak peak brightness in render.py (+ fix constant; RE-VERIFY the seal +
-  re-run S2 render tests) -> --downsample -> coarse pointing hint (camera, not truth) -> ASTAP. Record which
-  mitigation was used. THEN PHASE 5 is HIGH-RISK (WCS/plate-solve + @solver) -> MANDATORY 2nd independent LOCAL
-  review over git diff main..feat/S3, with the reviewer INDEPENDENTLY re-running the blind solve + checking
-  non-circularity (NEVER /code-review ultra). Merge on green + all dispositioned.
+  S4 (Sprint 4: detect_streak — Canny+Hough -> streak midpoint) is the next rung. Next tick opens FRESH ->
+  GENBA -> RESEARCH (SKIP — pure CV construction over the rendered frame; no external unknown; cv2 installed at
+  S0) -> IDEATE (BRIEF design brief: detect_streak(image_path) -> StreakDetection|DetectFailure; sigma-clip
+  background subtract -> cv2.Canny -> cv2.HoughLinesP -> cluster/merge collinear fragments into ONE streak ->
+  measured point = merged-line MIDPOINT (matches the exposure-midpoint scored truth), refined transversely by a
+  1D-GAUSSIAN fit to the PERPENDICULAR intensity profile (photutils.centroid_1dg or scipy curve_fit — NOT a 2D
+  centroid, which is wrong for an elongated feature); DetectFailure if none; reads NO truth, signature
+  image_path ONLY) -> PLAN (JIT shortcut: Sprint 4 ACs 4.1-4.4, same plan_sha256; lock + end at ExitPlanMode).
+  S4 is NOT high-risk in the seal/WCS sense (detect reads no truth, no WCS/plate-solve math, not a milestone) ->
+  a standard single local review unless the diff is >~300 LOC / >8 files. The streak now renders ~90σ above the
+  noise floor (S3 mitigation) so it is cleanly detectable; AC 4.1 asserts the detected midpoint is within N px of
+  the truth streak midpoint (test reads truth). Use ~/tracklet/.venv/bin/python.
 human_gate: false
-tick_lock: {pid: 99310, started: 2026-06-17T15:17:28+0800}
+tick_lock: null
 
-# --- post-S3-plan note (read before the S3 BUILD tick's §3.5 gate) ---
-# S3 plan LOCKED this tick (FRESH → PLAN_LOCKED_AWAITING_BUILD), JIT shortcut on the approved plan (SHA
-# unchanged). main HEAD is now the S3 plan-lock commit, loop-authored commits past last_green_sha 6815c32 (S2) —
-# expected, NOT a §3.5 anomaly. S3 BUILD tick: assert tree clean + only loop-authored commits since 6815c32, then
-# cut feat/S3 off main. S3 is HIGH-RISK (WCS/plate-solve + @solver) → PHASE 5 gets a MANDATORY 2nd independent
-# LOCAL review (reviewer re-runs the blind solve + checks non-circularity). render artifacts: render_scene(scene,
-# catalogue, tle, out_dir) -> RenderResult; image.fits (WCS-FREE) + truth.json under out_dir (gitignored). S3
-# WATCH-ITEM: streak peak ~162k e bright + _STREAK_PEAK_E=8e3 misleading — AC 3.1 (real blind solve on the
-# streaked frame) is the empirical gate; mitigate (cap brightness+fix constant / --downsample / hint / ASTAP)
-# only if it perturbs, re-verifying the seal if render.py is touched. venv ~/tracklet/.venv; solve-field + 4100
-# indexes installed at S0.
+# --- post-S3 note (read before the next PLAN/BUILD tick) ---
+# S3 (solve_pointing) merged GREEN at last_green_sha a4663ab (--no-ff). The PROJECT'S CORE RISK IS RETIRED: a
+# REAL blind solve-field (no RA/Dec seed) on the rendered golden streaked frame recovers the WCS to ~2.0 arcsec
+# (worst over center+corners; tol 10) vs the sealed truth — independently re-run by the mandatory 2nd reviewer
+# (a 0.3deg-off solve = 813", a flipped-CD = 10233", so 10" cannot hide a mis-solve). Empirical gate fired:
+# render Mitigation #1 applied (controlled streak ridge, _STREAK_PEAK_E capped 8e3->1500 NOW HONEST = exact
+# rendered peak, _FLUX_ZEROPOINT_E 1e5->1e6) — this ALSO fixed a latent S2 near-noise-floor star defect; seal
+# re-verified (image.fits WCS-free, render sole truth writer) + all S2 ACs still green. main HEAD after this tick
+# is the bookkeeping commit one past a4663ab — expected, NOT a §3.5 anomaly. The @solver suite (pytest -m solver)
+# now has 2 real tests + must stay green at every later @solver-touching tick. CARRIED S6 WATCH-ITEM: solve_pointing
+# raises KeyError (not SolveFailure) on a malformed scale_hint — when S6's run.py wires real callers, make that
+# path return a typed SolveFailure (or validate the hint at the run.py boundary) so honest-failure is airtight.
+# NEXT rung S4 (detect_streak — CV, NOT @solver, NOT high-risk). venv ~/tracklet/.venv (Python 3.14.4).
 ---
 
 ## decisions log (append-only ReAct triples; newest last)
@@ -291,3 +290,9 @@ JUDGE: N/A — brief design brief (Sprint 3 fully specified; no design fork). Pr
 no truth (signature image+hint only), blind solve (no pointing seed); (c) signed contract signature preserved;
 (d) scope == Sprint 3 verbatim (the render-brightness cap is the plan's OWN gated mitigation, not new scope).
 ```
+
+- [tick 9 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for S3 (first @solver); verify gates + solver liveness + baseline before building. → Action(Read state; git branch/HEAD/clean + commits since 6815c32; plan SHA; which solve-field + index count; baseline) → Observation: clean tree @ 2719565, only loop-authored commits since S2-green, no feat/* branches, plan SHA matches d7237cdd…, solve-field present + 7 indexes, baseline 60/60 green. Cut feat/S3.
+- [tick 9 | BUILD] Thought: build solve_pointing under TDD via a spawned Generator (parent lean); AC 3.1 is the empirical de-risk of the bright streak. → Action(spawn general-purpose Generator on feat/S3: blind solve-field, SolveFailure-not-exception, reads-no-truth; @solver AC 3.1 render+real-blind-solve, 3.2 noise-failure, 3.3 signature) → Observation: Generator DONE — 1 commit cf8de5e; AC 3.1 INITIALLY FAILED (the empirical gate FIRED): streak rendered ~1.7e5 e/px (constant misdescribed it ~20×) + zeropoint left stars near the noise floor → solve-field deblended the bright trail into spurious collinear sources that starved the true-star asterism. Mitigation #1 applied (rewrote _render_streak to a controlled ridge, _STREAK_PEAK_E 8e3→1500 now EXACT, _FLUX_ZEROPOINT_E 1e5→1e6) → blind solve CONVERGES, recovered-vs-true 0.58" center / 2.02" worst (tol 10), index-4112. INDEPENDENTLY VERIFIED by parent: non-solver 62 + @solver 2 green, image.fits still WCS-free (peak 1819 e), render sole truth writer, solve_pointing blind (no --ra/--dec) + reads no truth.
+- [tick 9 | REVIEW] Thought: S3 HIGH-RISK (WCS/plate-solve + @solver + render.py — the keystone — was modified) → MANDATORY 2nd independent LOCAL review that re-renders/re-solves/re-verifies the seal + S2 ACs. → Action(spawn general-purpose reviewer over git diff main..feat/S3) → Observation: VERDICT ACCEPT_WITH_NOTES. Reviewer INDEPENDENTLY re-rendered + blind-solved (2.03" worst, no seed; probed 0.3°-off=813", flipped-CD=10233" → 10" cannot hide a mis-solve); seal survived (raw-header WCS-free, render sole writer); ALL S2 ACs still green incl. determinism (3 renders identical hash) + the midpoint convention (delta 0.06/0.10px = real ISS non-linear motion); _STREAK_PEAK_E now EXACTLY 1500 (measured); streak ~90σ above noise (S4-detectable); 25/30 stars >5σ. 1 MINOR: malformed scale_hint raises KeyError not SolveFailure → REJECTED for S3 (out of contract, no AC) + CARRIED as an S6 run.py watch-item. Non-circularity holds.
+- [tick 9 | INTEGRATE] Thought: gate passed (ACCEPT_WITH_NOTES + MINOR dispositioned + both suites green) → integrate. → Action(merge --no-ff feat/S3→main; pytest non-solver + solver; delete feat/S3) → Observation: merged @ a4663ab; 62 non-solver + 2 @solver green on main; branch deleted. S3 ≠ a milestone → no tag. no_progress_count stays 0 (green increment landed).
+- [tick 9 | HANSEI] What worked: the EMPIRICAL @solver GATE (AC 3.1) did EXACTLY its job — it surfaced a real, non-obvious physical-realism defect (the render dynamic range was unphysical: a ~170k-e streak + near-noise-floor stars) that NO non-solver test could have caught, because only a REAL blind solve exercises solve-field's own source extraction. The project's CORE technical risk (does the synthetic-from-real-data pipeline actually plate-solve?) is now RETIRED at ~2 arcsec. The render mitigation also fixed a latent S2 brightness defect — a Konnyaku-Stone smoothing of an earlier panel, surfaced by stacking the next one on top. Muda avoided: the Generator went straight to the gated mitigation ladder (no flailing). KAIZEN: (1) S6 — solve_pointing must return SolveFailure (not raise) on a malformed scale_hint when run.py wires real callers (carried, post-S3 note). (2) render.py is now touched by BOTH S2 and S3 — it is stable + sealed, but ANY further render change must re-verify the seal + re-run determinism. Anti-spin: green merge → no_progress reset to 0.
