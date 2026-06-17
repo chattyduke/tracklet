@@ -2,7 +2,7 @@
 current_milestone: M0
 current_increment: "S6 report + run + ONE-command (full-pipeline run.py incl. blind-recovered WCS; @solver happy path; honest failure; wire the malformed-scale_hint fix)"
 last_increment_id: "S5 measure_position + score (pixel->RA/Dec->arcsec residual; sole truth reader)"
-phase: PLAN
+phase: BUILD
 status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 069ccb718b5925695653b79bfebabfb68b5ad2a2
 green_suites:
@@ -48,7 +48,7 @@ next_action: >-
   the diff is large or touches the solve path materially. Merge feat/S6 -> main on green (non-solver + @solver) +
   all findings dispositioned.
 human_gate: false
-tick_lock: null
+tick_lock: {pid: 16692, started: 2026-06-17T14:37:32Z}  # tick 15 — S6 BUILD live
 
 # --- post-S5-build note (read before the S6 PLAN tick's §3.5 gate) ---
 # S5 measure_position + score BUILT + REVIEWED (2nd adversarial pass, HIGH-RISK read-side seal) + MERGED this tick
