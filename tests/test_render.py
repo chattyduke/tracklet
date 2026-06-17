@@ -181,7 +181,11 @@ def test_image_fits_data_matches_rendered_array(scene, catalogue, tle, tmp_path)
     result = render_scene(scene, catalogue, tle, tmp_path)
     with fits.open(result.image_path) as hdul:
         on_disk = hdul[0].data
-    assert _array_hash(on_disk) == _array_hash(result.image)
+    # FITS stores big-endian on disk; canonicalise to native float32 (the consumer-side normalise)
+    # before the byte-level comparison. Values must be identical to RenderResult.image.
+    on_disk_native = np.ascontiguousarray(on_disk.astype(np.float32))
+    assert _array_hash(on_disk_native) == _array_hash(result.image)
+    assert np.array_equal(on_disk, result.image)
 
 
 # ---------------------------------------------------------------------------
