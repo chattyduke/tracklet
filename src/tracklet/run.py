@@ -1,28 +1,38 @@
-"""run — the ONE-command orchestrator + CLI (S6).
+"""run — the ONE-command orchestrator + CLI (S6 synthetic; M1 S4 real-image).
 
-Wires the whole pipeline behind ``python -m tracklet.run [--config PATH] [--out DIR]``:
+Wires the whole pipeline behind one command. Two entry paths share the SAME blind solve -> detect ->
+measure(recovered WCS) -> score core:
 
-    build_scene -> render_scene -> [solve_pointing(BLIND), detect_streak]
-        -> measure_position(RECOVERED wcs) -> score(truth_path) -> residual.txt + report
+    synthetic (default):  build_scene -> render_scene -> ...
+    real (--image/--meta): ingest_external_image -> assemble_real_truth -> ...
+
+In both, the answer is produced by a sole WRITER (render / realtruth), the solver receives a WCS-free
+image + a coarse scale hint only (BLIND), the measurement uses the BLIND-recovered WCS (never a header
+WCS), and ``score`` is the SOLE reader of the sealed answer (run hands it the answer PATH).
 
 HONEST FAILURE is the load-bearing contract. A typed ``SolveFailure`` / ``DetectFailure`` surfaces as
 a labelled message + a NON-ZERO exit code + NO residual.txt — never a stack trace and never a
-fabricated residual. On success: write the finite residual, print it + the PASS/FAIL verdict, write
-the report, and return 0.
+fabricated residual. On the REAL path an additional honest failure exists: a blind solve that locks
+onto the WRONG field (AC 4.6) — its recovered field does not overlap the expected pointing field — is
+reported as a typed failure, NOT a flattering residual.
 
 The seal: run never reads the sealed answer itself. It hands ``score`` the answer PATH (score is the
 sole reader) and uses the BLIND-recovered WCS — never the true WCS — for the measurement. (Pinned by
-tests/test_run.py.)
+tests/test_run.py + tests/test_run_image.py.)
 """
 from __future__ import annotations
 
 import argparse
 import sys
+import tomllib
 from pathlib import Path
 
-# Module-level imports so tests can monkeypatch tracklet.run.{solve_pointing,detect_streak}.
+# Module-level imports so tests can monkeypatch tracklet.run.{solve_pointing,detect_streak,...}.
 from tracklet.detect_streak import DetectFailure, detect_streak
+from tracklet.ingest import ingest_external_image
 from tracklet.measure_position import measure_position
+from tracklet.realgate import check_field_overlap, wcs_center_radec
+from tracklet.realtruth import assemble_real_truth
 from tracklet.render import render_scene
 from tracklet.report import OverlayInputs, write_report
 from tracklet.scene import (
@@ -51,7 +61,18 @@ def _parse_args(argv: "list[str] | None") -> argparse.Namespace:
     parser.add_argument(
         "--out", default=str(_DEFAULT_OUT), help="output directory (default: %(default)s)"
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--image", default=None,
+        help="real-frame mode: path to a genuine telescope FITS frame (requires --meta)",
+    )
+    parser.add_argument(
+        "--meta", default=None,
+        help="real-frame mode: path to the frame's meta.toml (timing/site/pointing/satellite)",
+    )
+    args = parser.parse_args(argv)
+    if (args.image is None) != (args.meta is None):
+        parser.error("--image and --meta must be given together (real-frame mode needs both)")
+    return args
 
 
 def main(argv: "list[str] | None" = None) -> int:
@@ -71,6 +92,13 @@ def main(argv: "list[str] | None" = None) -> int:
     for _stale in ("residual.txt", "report.md", "overlay.png"):
         (out_dir / _stale).unlink(missing_ok=True)
 
+    if args.image is not None:
+        return _run_real(args, out_dir)
+    return _run_synthetic(args, out_dir)
+
+
+def _run_synthetic(args, out_dir: Path) -> int:
+    """The M0 synthetic path: render a scene from frozen fixtures, then the shared solve/score core."""
     # 1) Scene + frozen real-data fixtures (offline; no network).
     scene = build_scene(args.config)
     catalogue = load_catalogue(default_catalogue_path(scene))
@@ -110,6 +138,124 @@ def main(argv: "list[str] | None" = None) -> int:
     )
     write_report(result, overlay_inputs, str(out_dir))
     return 0
+
+
+def _run_real(args, out_dir: Path) -> int:
+    """The M1 real-frame path: ingest a genuine FITS, assemble sealed satellite-truth, then the shared
+    BLIND solve -> detect -> AC-4.6 plausibility gate -> measure -> score core.
+
+    The blind solve receives only the WCS-free ingested image + a coarse scale hint (no position
+    prior). A wrong-field lock (recovered field does not overlap the expected pointing field) is an
+    HONEST typed failure, not a flattering residual (AC 4.6). The header WCS, when present, is read
+    only by the report diagnostic in-memory — never fed into the solver.
+    """
+    with open(args.meta, "rb") as fh:
+        meta = tomllib.load(fh)
+
+    # 1) Ingest the real frame -> normalized, WCS-stripped clean image (the solver-facing artifact).
+    ingest = ingest_external_image(args.image, meta, str(out_dir))
+
+    # 2) Assemble the SEALED satellite-truth (realtruth is the sole writer; the header WCS is carried
+    #    in-memory for the report diagnostic only). The committed TLE drives the propagation.
+    tle = load_tle(meta["satellite"]["tle_file"] if Path(meta["satellite"]["tle_file"]).is_absolute()
+                   else str(Path(args.meta).resolve().parent / meta["satellite"]["tle_file"]))
+    rt = assemble_real_truth(tle, meta, str(out_dir), pointing_wcs=None)
+
+    # 3) BLIND plate-solve the CLEAN image (WCS-free image + coarse scale hint ONLY — no position
+    #    prior, no header WCS). A SolveFailure is HONEST.
+    fov_deg = float(meta["solver"]["fov_deg"])
+    solve = solve_pointing(str(ingest.image_path), {"fov_deg": fov_deg})
+    if isinstance(solve, SolveFailure):
+        print(f"could not solve: {solve.reason}")
+        return 2
+
+    # 4) Detect the trail. A DetectFailure is equally HONEST.
+    detection = detect_streak(str(ingest.image_path))
+    if isinstance(detection, DetectFailure):
+        print(f"could not detect: {detection.reason}")
+        return 3
+
+    # 5) AC 4.6 PLAUSIBILITY GATE (anti wrong-field-lock), computed downstream of the solver from
+    #    in-memory WCS centers — NEVER fed back in. The expected pointing center is the commanded
+    #    mount pointing plus the FIXED camera offset (provided in meta, derived NON-CIRCULARLY from
+    #    OTHER frames of this camera). If the offset is absent, fall back to the commanded center.
+    naxis2, naxis1 = ingest.image.shape
+    rec_ra, rec_dec = wcs_center_radec(solve.wcs, naxis1, naxis2)
+    expected = _expected_pointing_center(meta)
+    plausible = check_field_overlap((rec_ra, rec_dec), expected, fov_deg)
+    if not plausible.ok:
+        print(
+            "could not trust solve: wrong field lock — recovered field "
+            f"({rec_ra:.4f}, {rec_dec:.4f}) does not overlap expected "
+            f"({expected[0]:.4f}, {expected[1]:.4f}); separation "
+            f"{plausible.separation_deg:.4f} deg > tolerance {plausible.tolerance_deg:.4f} deg "
+            "(0.5 x fov). No residual reported (honest typed failure, AC 4.6)."
+        )
+        return 4
+
+    # 6) Measure through the BLIND-RECOVERED WCS (never the header WCS), then 7) score against the
+    #    sealed answer PATH (score is the sole reader — run never opens the answer itself).
+    measured = measure_position(detection, solve.wcs)
+    result = score(measured, str(rt.truth_path))
+
+    # 8) Write the FINITE residual (only ever written on a real, plausibility-passing residual).
+    (out_dir / "residual.txt").write_text(f"{result.residual_arcsec:.6f}\n")
+
+    verdict = "PASS" if result.passed else "FAIL"
+    print(
+        f"residual: {result.residual_arcsec:.4f}\" "
+        f"(threshold {result.threshold_arcsec}\") -> {verdict}"
+    )
+    _write_real_report(
+        out_dir, result, meta, rec_ra, rec_dec, expected, plausible, detection
+    )
+    return 0
+
+
+def _expected_pointing_center(meta: dict) -> "tuple[float, float]":
+    """The independently-known pointing center for the AC-4.6 gate: commanded mount pointing
+    (STRCURA/STRCUDE) plus a FIXED camera offset (``meta['pointing']['camera_offset_ra_deg']`` /
+    ``camera_offset_dec_deg``) when present — derived NON-CIRCULARLY from OTHER frames of this camera,
+    never from this frame's own recovered-minus-commanded. Absent an offset, the commanded center is
+    used (a conservative gate — it can only reject, never flatter)."""
+    p = meta["pointing"]
+    ra = float(p["commanded_ra_deg"]) + float(p.get("camera_offset_ra_deg", 0.0))
+    dec = float(p["commanded_dec_deg"]) + float(p.get("camera_offset_dec_deg", 0.0))
+    return ra, dec
+
+
+def _write_real_report(out_dir, result, meta, rec_ra, rec_dec, expected, plausible, detection) -> None:
+    """A minimal honest real-frame report (Sprint 4). The full five-source degradation report is
+    Sprint 5 — this records the headline residual + the plausibility-gate result + provenance, so a
+    successful real run leaves a human-readable artifact alongside residual.txt (AC 4.1)."""
+    sat = meta.get("satellite", {})
+    obs = meta.get("observatory", {})
+    verdict = "PASS" if result.passed else "FAIL"
+    lines = [
+        "# tracklet — real-image run (M1)",
+        "",
+        "## Result",
+        f"- **Residual: {result.residual_arcsec:.4f}\"** (threshold {result.threshold_arcsec}\") "
+        f"-> **{verdict}**",
+        "",
+        "## Plausibility gate (AC 4.6 — anti wrong-field-lock)",
+        f"- Recovered field center: RA {rec_ra:.4f}, Dec {rec_dec:.4f} deg",
+        f"- Expected pointing center: RA {expected[0]:.4f}, Dec {expected[1]:.4f} deg",
+        f"- Separation {plausible.separation_deg:.4f} deg <= tolerance "
+        f"{plausible.tolerance_deg:.4f} deg (0.5 x fov) -> field overlap CONFIRMED",
+        "",
+        "## Provenance",
+        f"- Satellite: {sat.get('name', '?')} (NORAD {sat.get('norad_id', '?')})",
+        f"- Observatory: {obs.get('name', '?')}",
+        f"- Detected trail: {detection.length_px:.0f} px @ {detection.angle_deg:.2f} deg",
+        "",
+        "## What this proves",
+        "- A GENUINE telescope frame was blind plate-solved (no position prior) and its real satellite "
+        "trail measured to the residual above against independently sealed TLE-propagated truth.",
+        "- The full degradation budget (atmosphere/PSF/timing/plate-scale/noise) is the Sprint-5 report.",
+        "",
+    ]
+    (Path(out_dir) / "report.md").write_text("\n".join(lines))
 
 
 if __name__ == "__main__":
