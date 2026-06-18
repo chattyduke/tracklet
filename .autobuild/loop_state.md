@@ -84,7 +84,7 @@ next_action: >-
   center (305.557,−14.964); detect_streak→4956 px @126.16°. Sprint-3 scored truth = (306.525,−14.889) @ midpoint
   2022-11-18T02:47:21.782Z.
 human_gate: false  # Sprint-3 merged green; no Andon halt. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20, PROVENANCE.md). NOT a hard human stop this tick. BUT a real-world GATING ITEM is surfaced to Sam in needs_human: the real BW3 frame is NOT yet fetched, and Sprint 4 (the NEXT tick) is @solver — it CANNOT complete frame-absent. The frame must be obtained (longer-window/out-of-band fetch.sh, or Sam drops the funpacked .fits in) before Sprint 4. This also finally executes AC 2.5 (the binding Sprint-1 confirmation, still un-run).
-tick_lock: null  # cleared at tick-23 end (Sprint-3 BUILD complete + merged green @ 534bc31; feat/m1-s3-realtruth deleted post-merge; no live build in progress)
+tick_lock: {pid: 24, started: "2026-06-18 tick 24 — M1 Sprint 4 BUILD (run.py --image/--meta + AC-4.6); GENBA gates PASS (clean tree, only loop-authored commit e45b7c7 since last_green 534bc31, plan SHA 955c27e3 matches, no_progress 0); baseline 135 non-solver green. GATING: real BW3 frame not yet on disk — fetching via fetch.sh (longer window) before Sprint 4 can complete."}
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
