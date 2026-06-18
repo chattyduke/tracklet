@@ -67,7 +67,7 @@ next_action: >-
   MILESTONE residual = 315.5236″; degradation report report.md emitted with the five sources + the in-memory
   pointing-vs-timing split (dRA −148.4″ / dDec −278.4″, primarily along-track).
 human_gate: false  # Sprint-5 COMPLETE + merged GREEN; no Andon halt. AC-1.5 frame-confirmation gate already cleared by Sam (tick 19/20). The milestone numeric residual (315.52″) AND its honest degradation report both now EXIST. No human decision required to continue: ONE BUILD tick remains (Sprint 6 = README + tag v0.1.1 LOCAL). Surfaced to Sam in needs_human as informational: M1 is one README+tag away from done; nothing to decide.
-tick_lock: null  # cleared at tick-26 end (Sprint-5 COMPLETE — honest degradation report ACs 5.1-5.4 built + merged green @ 495e67c; feat/m1-s5-degradation-report deleted post-merge; tree clean; no live build in progress).
+tick_lock: {pid: tick-27, started: "2026-06-18 M1-Sprint-6"}  # SET at tick-27 begin (BUILD tick: M1 Sprint 6 = README "Real image (M1)" section + tag v0.1.1 LOCAL; the FINAL M1 close-out). GENBA gates ALL PASS: clean tree @ 4f48467, only loop-authored commit since last_green 495e67c, only `main` branch, plan re-hash 955c27e3…a2ed MATCHES, no_progress 0, baseline GREEN (156 non-solver + 8 @solver, golden e2e 2.081″). Cleared at tick-27 end.
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
