@@ -93,6 +93,37 @@ along-track term (0.598 d). LEO parallax makes the site material (a ~63 m error 
 the 10″ gate), which is why the earlier placeholder (31.0442 / −115.4633 / 2790 m) was confirmed-to-source.
 `meta.toml` now records `site_confirmed = true`.
 
+## C1 camera offset — derived NON-CIRCULARLY (Sprint 4 / AC 4.6, tick 25)
+
+The DDOTI frame carries **no header WCS**, so the AC-4.6 plausibility gate needs an independently-known
+pointing center. The commanded mount pointing alone (`STRCURA`/`STRCUDE` = 303.6068° / −16.2040°) sits
+**2.25° from where the C1 camera actually points** — a real, fixed camera-to-mount offset. That offset was
+derived **without ever touching the target frame's own recovered-minus-commanded** (which would be circular
+and would always pass the gate). Instead, **3 OTHER same-night C1 frames** were blind-solved and the mean
+offset taken:
+
+| Source frame (member) | Blind-recovered center (RA, Dec) | offset (recovered − commanded) |
+|---|---|---|
+| `BW3_DDOTI_data/20221118/20221118T024735C1o.fits.fz` | (305.5564, −14.9639) | (+1.9496, +1.2401) |
+| `BW3_DDOTI_data/20221118/20221118T024757C1o.fits.fz` | (305.5563, −14.9638) | (+1.9495, +1.2402) |
+| `BW3_DDOTI_data/20221118/20221118T024816C1o.fits.fz` | (305.5562, −14.9639) | (+1.9494, +1.2401) |
+
+- **Mean offset:** `camera_offset_ra_deg = +1.94952`, `camera_offset_dec_deg = +1.24011` (committed to `meta.toml [pointing]`).
+- **Scatter:** max great-circle separation of any frame's recovered center from the mean-offset center = **0.00011° (0.4″)** — far below the **~0.1° Andon threshold**; the camera offset is rock-stable across the night.
+- **Expected C1 pointing center for the target frame** = commanded + offset = **(305.5563, −14.9639)**.
+- **Non-circularity preserved:** the offset comes from the OTHER 3 frames; the target frame `024706` contributes nothing to it. The target frame's own blind-recovered center (305.5565, −14.9640) then overlaps the expected center to **0.0002°** — << the 1.705° half-field tolerance — so the gate confirms field overlap and the residual is a real, non-circular measurement.
+- The 3 source frames are fetched (single-pass stream of the same Zenodo archive) into `tests/fixtures/real/offset_*.fits.fz`; they are **gitignored** (`*.fits.fz` / `*.fits`), like the target frame. Re-derive with `tests/fixtures/real/_derive_offset.py` (also gitignored — a scratch helper).
+
+### The milestone residual (AC 4.1 / AC 6.1)
+
+With the offset committed, `run.py --image … --meta …` on the locked frame produces the **M1 numeric residual
+= 315.52″** (AC-4.6 plausibility gate PASSED: recovered field overlaps expected field, separation 0.0002° ≤
+1.705°). This is the **honest real-frame number**, dominated by the documented **0.598-day TLE-age along-track
+term** (BlueWalker-3 moves arcminutes per second; a ~0.6-day-old LEO TLE accumulates real along-track error of
+this magnitude). It deliberately does **not** pass the M0 synthetic 10″ gate — the milestone DoD is a *reported*
+residual passing the *plausibility* gate, not a tight residual. The five-source degradation decomposition that
+attributes this 315.52″ across pointing/timing/site/plate-scale/noise is the **Sprint-5** report.
+
 ## Smoke verification (live, this tick — AC 1.2 / AC 1.3)
 
 `solve_pointing` and `detect_streak` were run **verbatim** (reused from M0) on the **raw funpacked frame**.

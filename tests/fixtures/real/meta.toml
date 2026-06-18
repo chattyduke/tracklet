@@ -29,6 +29,15 @@ mjd_obs = 59901.11616647
 header_wcs_present = false
 commanded_ra_deg = 303.6067812823882    # STRCURA
 commanded_dec_deg = -16.203963888888893  # STRCUDE
+# FIXED C1 camera offset, derived NON-CIRCULARLY (Sprint 4 / AC 4.6, tick 25) by blind-solving 3 OTHER
+# same-night C1 frames (20221118T024735/024757/024816 C1o) and taking mean(recovered - commanded). The
+# 3 frames agree to a scatter of 0.00011 deg (0.4") — the camera offset is rock-stable (Andon threshold
+# ~0.1 deg). This is NOT this frame's own recovered-minus-commanded (that would be circular). The expected
+# C1 pointing center for the AC-4.6 gate is therefore commanded + this offset = (305.5563, -14.9639), which
+# the target frame's own blind solve (305.5565, -14.9640) overlaps to 0.0002 deg (<< 1.705 deg half-field).
+# Derivation provenance + the 3 source frames are documented in PROVENANCE.md.
+camera_offset_ra_deg = 1.94952    # mean(recovered_ra - commanded_ra) over the 3 OTHER C1 frames
+camera_offset_dec_deg = 1.24011   # mean(recovered_dec - commanded_dec) over the 3 OTHER C1 frames
 
 [solver]
 # Coarse blind scale hint only (no position/orientation prior). DDOTI C1 plate scale ~2.0"/px, FOV ~3.41 deg.
