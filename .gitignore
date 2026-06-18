@@ -4,6 +4,11 @@ out/
 indexes/
 astap/
 *.fits
+*.fits.fz
+# real-frame fetch scratch (fetch.sh streams these on demand; never commit the bytes)
+tests/fixtures/real/offset_*
+tests/fixtures/real/fetch_stream.err
+tests/fixtures/real/_derive_offset.py
 
 # Python
 __pycache__/
