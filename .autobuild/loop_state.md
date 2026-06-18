@@ -1,8 +1,8 @@
 ---
 current_milestone: M1
-current_increment: "M1 Sprint 1 BUILD — frame CONFIRMED (BlueWalker-3 DDOTI 20221118T024706C1o, NORAD 53807, Zenodo 8102655, CC-BY; AC 1.1-1.3,1.5 in hand) but HALTED at the TLE WATCH-ITEM Andon: no historical NORAD-53807 TLE bracketing 2022-11-18T02:47:16 UTC obtainable without Space-Track credentials (AC 1.4 + Sprint-3 satellite-truth blocked). Awaiting Sam (see next_action >>> TLE BLOCKER). plan plan-the-m1-real-image-snappy-bunny.md"
+current_increment: "M1 Sprint 1→6 BUILD — frame + TLE BOTH IN HAND (BlueWalker-3 DDOTI 20221118T024706C1o, NORAD 53807, Zenodo 8102655 CC-BY; historical TLE epoch 22321.518 = 2022-11-17T12:25Z, 0.60d pre-exposure, checksum-valid). AC 1.1-1.5 satisfiable; build fixtures→ingest→real-truth→run→report→residual→tag v0.1.1, AC-4.6 STRICT via empirical C1 offset. plan plan-the-m1-real-image-snappy-bunny.md"
 last_increment_id: "S7 seal tests + golden e2e + README/docs — M0 COMPLETE, tagged v0.1.0"
-phase: BUILD  # tick-20 entered BUILD frame-in-hand (AC-1.5 cleared), began the Sprint-1 fixtures build, and hit the TLE WATCH-ITEM Andon (next_action's >>> TLE BLOCKER block): NO historical NORAD-53807 TLE bracketing 2022-11-18T02:47:16 UTC is obtainable without Space-Track credentials. HALTED — did NOT fabricate a TLE / use the 3.5y-far current TLE / build a correlator.
+phase: BUILD  # TLE BLOCKER RESOLVED (this turn) — a public, no-credential historical NORAD-53807 TLE (epoch 22321.518, 0.60d pre-exposure, checksum-valid, corroborated) is in hand (see next_action's ✅ TLE RESOLVED block). The Sprint-1 BUILD resumes with frame + TLE both in hand; Sprints 1→6 run autonomously.
 status: PLAN_LOCKED_AWAITING_BUILD  # UNCHANGED: Sprint 1 still NOT complete — frame is confirmed but the satellite-truth TLE dependency (AC 1.4) is unmet, so the lock can't be signed. The next tick owes the Sprint-1 BUILD (write fixtures/fetch.sh/PROVENANCE.md + commit the historical TLE + smoke + AC 1.5 sign-off) once the TLE is in hand. NO partial fixtures committed (a PROVENANCE.md missing its TLE epoch+source block would be a half-smoothed panel / inventory-muda).
 last_green_sha: d58f94f854d101cec414eb037866d07257c53293
 green_suites:
@@ -10,32 +10,30 @@ green_suites:
   - {cmd: 'pytest -m solver', passed: 5, failed: 0, note: 'S3 x2 + S6 x2 + S7 golden-e2e x1. Golden e2e (THE DoD gate) blind-solve residual = 2.081" (< 10" gate; expected ~2-4"; < 5" stretch), actual number always reported via capsys.disabled(). Independently re-rendered+re-solved in REVIEW. Run via `make test-golden`.'}
 plan_file: ~/.claude/plans/plan-the-m1-real-image-snappy-bunny.md
 plan_sha256: 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed
-no_progress_count: 1  # 0→1 (mechanical, §3.3): tick-20 was a BUILD tick that produced NO green merge (blocked at the TLE Andon). This is a NEW external dependency (historical TLE), distinct from the tick-19 frame gate Sam already cleared — but the counter is honest, not gamed: I do NOT relabel a no-merge build tick as "not a build tick". ⚠️ §4-#5 HARD GATE: the NEXT no-merge BUILD tick trips no_progress_count=2 → forced human halt. So the resumption tick MUST be TLE-in-hand (Sam supplies/locates the historical NORAD-53807 TLE, or Space-Track creds), NOT another blind TLE re-search (no new info → no progress → trips the gate). A green Sprint-1 merge resets this to 0.
+no_progress_count: 0  # RESET from 1: tick-20's no-merge halt was the pre-flagged TLE WATCH-ITEM Andon, now RESOLVED this turn (a public, no-credential historical TLE was LOCATED — genuine NEW info enabling the build, not spinning). The resumption BUILD tick has frame + TLE both in hand and should merge green; the reset gives Sprint 1 a fair §3.3 budget (a normal REVISE→FIX bounce must not immediately trip §4-#5). A green Sprint-1 merge keeps it at 0.
 open_findings: []  # M1 starts clean (M0 closed at tick 17, ACCEPT). CARRIED M1 watch-items (NOT blocking; only bite once a REAL frame is processed): (1) detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol -> midpoint bias (S4 review) — watch midpoint robustness on the real frame; (2) [benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT).
 next_action: >-
-  🔴 TLE BLOCKER — HUMAN ANDON GATE RAISED (tick 20). The frame is confirmed (AC 1.1-1.3,1.5); the ONE remaining
-  Sprint-1 dependency — a HISTORICAL BlueWalker-3 (NORAD 53807) TLE bracketing the exposure midpoint
-  2022-11-18T02:47:16.782 UTC (MJD 59901.116) — is NOT obtainable from any public, no-credential source. Verified
-  this tick: CelesTrak gp.php = current-only (epoch 2026-06-17, 3.5 yr away); CelesTrak gp-history.php = paid
-  subscription (public endpoint 404s); SatNOGS DB / n2yo / orbit.ing-now / satview = latest-only; SeeSat-L Sep-2022
-  has BW3 posts but the Nov-2022 thread index 404s + no ~2022-11-18 TLE surfaced; every robust historical path
-  (spacetrack client, Jonathan McDowell's archive, daily catalog mirrors) routes through Space-Track.org → FREE
-  login required. No ~/.netrc / stored Space-Track identity on this machine.
-  >>> WHAT SAM MUST DO TO UNBLOCK (any ONE):
-    (a) Pull the historical TLE from Space-Track.org (free account): query NORAD 53807, epoch window
-        2022-11-15…2022-11-21 (or `EPOCH/2022-11-15--2022-11-21` in the API), pick the set whose epoch is CLOSEST
-        to 2022-11-18T02:47 UTC, and drop the 2 TLE lines into ~/tracklet so the next tick commits them. The Zenodo
-        dataset (record 8102655) may ALSO ship a TLE alongside the BW3 frames — Sam to check the archive contents.
-    (b) Supply Space-Track credentials (username + password / API) for the loop to fetch it — Sam to authorize +
-        provide; the loop will NOT use stored creds it isn't given.
-    (c) Point at another free historical-TLE source that carries NORAD 53807 near 2022-11-18 (e.g. an amateur
-        archive, a SatNOGS observation TLE, a published BW3-tracking paper's appendix).
-  >>> DO NOT (loop invariant): fabricate a TLE; substitute the current 2026 TLE (SGP4 fiction at 3.5 yr → a
-  meaningless satellite-truth + a fabricated residual); build a TLE→streak correlator to "establish" the orbit
-  (that is PHASE 2, explicitly barred). Record the ACTUAL TLE epoch + source into PROVENANCE.md once obtained.
-  >>> ANTI-SPIN (§3.3): no_progress_count is now 1. The resumption tick MUST be TLE-in-hand — re-running the same
-  blind TLE web-search yields no new info → no green merge → trips no_progress_count=2 (hard §4-#5 halt). So do NOT
-  resume the loop until the TLE is supplied/located.
+  ✅ TLE RESOLVED (this turn) — a public, no-credential HISTORICAL BlueWalker-3 (NORAD 53807) TLE is IN HAND.
+  Epoch 22321.51776124 = 2022-11-17T12:25:34.6 UTC, only 0.598 d BEFORE the exposure midpoint
+  (2022-11-18T02:47:16.782 UTC) — well inside the ±2-day LEO usability window; checksum-valid (L1=3, L2=5; both 69
+  chars); orbit-sane (i=53.2022°, mean motion 15.18590617 rev/day ≈ BW3 ~550 km LEO); independently corroborated by
+  a sibling archive dump (epoch 22320.728 = 2022-11-16T17:28 UTC, 1.388 d). Build is UNBLOCKED.
+  >>> THE TLE — commit these TWO lines VERBATIM as the M1 satellite-truth fixture (note intl designator 2022-111AL,
+      NOT 2022-111G):
+        1 53807U 22111AL  22321.51776124  .00001408  00000+0  82536-4 0  9993
+        2 53807  53.2022 319.8514 0014272 124.6871 235.5472 15.18590617 10265
+  >>> TLE PROVENANCE (pin into PROVENANCE.md): source = a GitHub read-only mirror (vzlusat/vzlusat1-timepix-decoder)
+      of a CelesTrak active.txt 6-hourly full-catalog dump — raw URL
+      https://raw.githubusercontent.com/vzlusat/vzlusat1-timepix-decoder/master/misc/tle/147.228.97.106/tle/active-2022-11-18-06-05-01.txt
+      (dump downloaded 2022-11-18 06:05 UTC; the file carries the verbatim "BLUEWALKER 3" name line above the 53807
+      element set; data origin CelesTrak / Space-Track). The FILENAME timestamp is the download time; the
+      AUTHORITATIVE epoch is the decoded 22321.51776124. Cross-checked: CelesTrak Wayback group/INTDES snapshots gave
+      only 2.3–2.6 d sets (early side); Zenodo 8102655 ships NO TLE; planet4589/SatNOGS/live CelesTrak = no usable
+      history. For a sub-0.1-d epoch the only path is an authenticated Space-Track GP_HISTORY query — NOT needed for M1.
+  >>> HONEST RESIDUAL CAVEAT (carry into the S5 degradation report): a ~0.6-day-old LEO TLE contributes real
+      along-track propagation error to the residual → name it under the report's "timing / ephemeris uncertainty"
+      source. The M1 residual is the HONEST real-frame number (AC-4.6 plausibility-gated, not a tight residual gate);
+      it will partly reflect TLE age, which is expected + truthful, NOT a defect to hide or flatter.
 
   ✅ AC-1.5 HUMAN GATE CLEARED (tick 19→20) — Sam CONFIRMED the M1 frame + the strict-AC-4.6 approach. Sprints 1→6
   then run AUTONOMOUSLY frame-in-hand (no further human gate EXCEPT this TLE blocker — once it is resolved).
@@ -71,11 +69,11 @@ next_action: >-
   expected_C1_center| ≤ 0.5×fov_deg (1.7°). Non-circular (offset from OTHER frames), strict, still catches a gross
   wrong-field lock. Do NOT use this frame's own (recovered − commanded) as the reference — circular (trivial self-match).
 
-  >>> TLE WATCH-ITEM (the one real remaining dependency — Andon to Sam if blocked): the residual needs a HISTORICAL
-  BlueWalker-3 (NORAD 53807) TLE bracketing 2022-11-18T02:47:16 UTC (MJD 59901.116). Try public sources first
-  (CelesTrak GP history; public TLE archives / SatNOGS). Space-Track.org has the full history but needs a FREE login
-  Sam may have to supply. If no historical TLE is obtainable without credentials → ANDON, surface to Sam; do NOT
-  fabricate a TLE or silently use a far-epoch current TLE. Record the actual TLE epoch + source into PROVENANCE.md.
+  >>> TLE (RESOLVED — see the ✅ TLE RESOLVED block at the top of next_action): the historical NORAD-53807 TLE
+  bracketing 2022-11-18T02:47:16 UTC is in hand (epoch 22321.51776124, 0.598 d pre-exposure, checksum-valid). Commit
+  the two verbatim lines as the satellite-truth fixture, pin the source/epoch into PROVENANCE.md, and propagate via
+  skyfield TOPOCENTRIC (OAN-SPM site) to the exposure midpoint for truth.json["scored_truth"]. Do NOT re-search for
+  a TLE (it's found); do NOT substitute the far-epoch current TLE.
 
   >>> BUILD SEQUENCE (plan plan-the-m1-real-image-snappy-bunny.md, now frame-in-hand): S1 = fixtures/real/ +
   fetch.sh + PROVENANCE.md (AC 1.5 sign-off recorded) + commit TLE + smoke (make test green); S2 = ingest
@@ -102,7 +100,7 @@ next_action: >-
   ingest beyond the funpack this frame needs, no streak-vs-catalogue matcher (PHASE 2, scoped-only). (f) ALL review
   LOCAL/FREE (/code-review ultra BANNED); NEVER auto-push (v0.1.1 LOCAL only); NEVER write a handoff file. Carry the
   2 M1 watch-items (open_findings note above).
-human_gate: true  # RAISED tick-20 by the TLE WATCH-ITEM Andon (the watch-item flagged in tick-19's frontmatter). The frame (AC 1.1-1.3,1.5) is confirmed, but the historical NORAD-53807 TLE bracketing 2022-11-18T02:47:16 UTC (MJD 59901.116) — required for AC 1.4 + the Sprint-3 satellite-truth — is NOT obtainable from any public, no-credential source (CelesTrak gp-history needs a paid sub; SatNOGS/n2yo/orbit.ing-now show latest-only; SeeSat-L Nov-2022 thread index 404s; every robust path routes through Space-Track.org which needs a FREE login). No ~/.netrc / stored Space-Track identity exists. Per the invariant: did NOT fabricate a TLE, did NOT substitute the 3.5-year-far current TLE (epoch 2026-06-17 → SGP4 fiction), did NOT build a correlator. Awaiting Sam (see needs_human / next_action's >>> TLE BLOCKER block).
+human_gate: false  # CLEARED this turn — the TLE WATCH-ITEM that raised it at tick-20 is RESOLVED: a public, no-credential historical NORAD-53807 TLE (epoch 22321.51776124 = 2022-11-17T12:25:34.6 UTC, 0.598 d pre-exposure, checksum-valid, independently corroborated) is recorded in next_action's ✅ TLE RESOLVED block. No Space-Track creds needed. The Sprint-1 BUILD proceeds frame + TLE in hand.
 tick_lock: null  # cleared at tick-20 end (BUILD halted at the TLE Andon; the empty feat/m1-s1-real-frame branch — 0 commits — was deleted; no live build in progress)
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
