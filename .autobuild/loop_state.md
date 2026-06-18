@@ -73,7 +73,7 @@ next_action: >-
   truth via realtruth = (306.525,−14.889) @ midpoint 2022-11-18T02:47:21.782Z — lands 0.97° from the recovered center,
   INSIDE the half-field (coherent frame+truth; the BINDING residual is the next tick).
 human_gate: false  # Sprint-4 (partial) merged GREEN; no Andon halt. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20). NOT a hard human stop this tick — the frame is now fetched + AC 2.5 (binding Sprint-1 confirmation) EXECUTED + PASSES, so the milestone is progressing autonomously. No human decision is required to continue: the next BUILD tick fetches 3 more C1 frames serially, derives the non-circular offset, and produces the AC 4.1 numeric residual. (Surfaced to Sam in needs_human as informational: the milestone numeric residual is one tick away, pending the offset derivation.)
-tick_lock: null  # cleared at tick-24 end (Sprint-4 partial BUILD complete + merged green @ 36f36be; feat/m1-s4-run-image deleted post-merge; stalled parallel offset-frame fetches killed + scratch tidied; tree clean; no live build in progress).
+tick_lock: {pid: tick-25, started: 2026-06-18}  # tick-25 live BUILD: M1 Sprint-4 COMPLETION (AC 4.1 numeric residual). Deriving the non-circular C1 camera offset from 3 OTHER same-night frames, committing it to meta.toml, then running the real e2e → the milestone residual. Cleared at tick end.
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
