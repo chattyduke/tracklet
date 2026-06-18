@@ -11,8 +11,9 @@ satellite TLE), so truth is known *by construction*. The end-to-end golden test 
 known scene → run the pipeline → assert `residual_arcsec < THRESHOLD` — **is** the executable
 definition of done.
 
-> **Status:** under construction. Sprint 0 (environment + plate-solver gate) is the current
-> milestone. The pipeline modules (S1–S7) are stubs until their sprints land.
+> **Status:** M0 complete (`v0.1.0`). The full pipeline runs end to end on the synthetic
+> scene; the golden e2e recovers the satellite to **2.08″** against sealed truth (gate 10″).
+> The sealed-truth / non-circularity boundary is formally pinned by `tests/test_seal.py`.
 
 ## What this proves — and what it does NOT
 
@@ -29,11 +30,15 @@ definition of done.
 git clone <repo> tracklet && cd tracklet
 make setup                 # creates .venv (Python 3.14), installs deps
 ./scripts/install_indexes.sh   # one-time: installs solve-field + ~340 MB wide-field indexes
-make fetch                 # one-time: freezes the TLE + Gaia cone fixtures (online)
+make test-golden           # the @solver golden e2e: render -> blind-solve -> residual < 10"
 make run                   # the one command -> out/{residual.txt, overlay.png, report.md}
-make test                  # unit suite (no solver needed)
-make test-golden           # the @solver golden e2e (needs the plate-solver gate above)
+make test                  # fast unit suite (NO solver needed; proves the seal + WCS math)
 ```
+
+The TLE + Gaia fixtures are **committed** under `data/`, so reproducing the result needs no
+network: a fresh `git clone` → `make setup` → `./scripts/install_indexes.sh` → `make test-golden`
+recovers the ~2″ residual on a clean machine. `make fetch` is **optional** — it only re-freezes the
+fixtures from CelesTrak + Gaia (online) and is not needed to reproduce.
 
 ## Environment
 
@@ -59,6 +64,13 @@ make test-golden           # the @solver golden e2e (needs the plate-solver gate
 
 ## Error budget
 
-Documented with the golden test in S7. Expected residual ~2–4″ (transverse centroid ⊕ solver WCS
-RMS ⊕ TAN-projection discretization); gate `RESIDUAL_THRESHOLD_ARCSEC = 10″`, stretch target <5″.
-The actual measured residual is always reported, pass or fail.
+Expected residual **~2–4″** in quadrature: transverse streak-centroid ~2″ ⊕ solve-field internal
+WCS RMS ~1–2″ ⊕ TAN-projection / pixel-scale discretization <1″. Gate
+`RESIDUAL_THRESHOLD_ARCSEC = 10″` (a ~2–3× margin so a stranger's independent blind solve cannot
+flake), stretch target <5″. The **observed** golden-e2e residual is **2.08″**. The actual measured
+residual is always reported by `make run` and `make test-golden`, pass or fail.
+
+The pixel convention (CD-sign / Y-flip / 0-vs-1 origin) is pinned **independently** of the solver by
+deterministic sub-pixel WCS round-trip tests under `pytest -m "not solver"`, so a 1-px convention
+regression — which would land ~7″, still under the 10″ gate — is caught hard upstream and cannot
+hide under the golden gate.
