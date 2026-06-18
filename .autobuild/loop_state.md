@@ -1,90 +1,51 @@
 ---
 current_milestone: M1
-current_increment: "M1 Sprint 1→6 BUILD — frame + TLE BOTH IN HAND (BlueWalker-3 DDOTI 20221118T024706C1o, NORAD 53807, Zenodo 8102655 CC-BY; historical TLE epoch 22321.518 = 2022-11-17T12:25Z, 0.60d pre-exposure, checksum-valid). AC 1.1-1.5 satisfiable; build fixtures→ingest→real-truth→run→report→residual→tag v0.1.1, AC-4.6 STRICT via empirical C1 offset. plan plan-the-m1-real-image-snappy-bunny.md"
-last_increment_id: "S7 seal tests + golden e2e + README/docs — M0 COMPLETE, tagged v0.1.0"
-phase: BUILD  # TLE BLOCKER RESOLVED (this turn) — a public, no-credential historical NORAD-53807 TLE (epoch 22321.518, 0.60d pre-exposure, checksum-valid, corroborated) is in hand (see next_action's ✅ TLE RESOLVED block). The Sprint-1 BUILD resumes with frame + TLE both in hand; Sprints 1→6 run autonomously.
-status: PLAN_LOCKED_AWAITING_BUILD  # UNCHANGED: Sprint 1 still NOT complete — frame is confirmed but the satellite-truth TLE dependency (AC 1.4) is unmet, so the lock can't be signed. The next tick owes the Sprint-1 BUILD (write fixtures/fetch.sh/PROVENANCE.md + commit the historical TLE + smoke + AC 1.5 sign-off) once the TLE is in hand. NO partial fixtures committed (a PROVENANCE.md missing its TLE epoch+source block would be a half-smoothed panel / inventory-muda).
-last_green_sha: d58f94f854d101cec414eb037866d07257c53293
+current_increment: "M1 Sprint 2 BUILD — ingest: real FITS → normalized, WCS-stripped clean image + truth.json (seal-preserving). TDD ingest.ingest_external_image (HDU-select, BSCALE/BZERO→float32, native byte order, non-finite→median, orientation-preserved) + write_clean_fits; EXTEND the seal over ingest; AC 2.5 (@solver) = the NORMALIZED image still blind-solves+detects = the BINDING confirmation of the provisional Sprint-1 lock. plan plan-the-m1-real-image-snappy-bunny.md"
+last_increment_id: "M1 S1 — real-frame acquire + smoke + lock (BlueWalker-3 / DDOTI), MERGED @ b0155a6"
+phase: HANSEI  # M1 Sprint 1 BUILD COMPLETE this tick (tick 21): TLE independently re-verified, frame+TLE in hand, fixtures+provenance+live-smoke committed, MERGED green. Tick ENDS here (§3.2 BUILD tick = green merge).
+status: PLAN_LOCKED_AWAITING_BUILD  # Sprint 1 DONE+merged; the M1 plan is consumed sprint-by-sprint (plan_sha256 unchanged), so the NEXT tick is the Sprint-2 ingest BUILD. The Sprint-1 lock is PROVISIONAL — Sprint-2 AC 2.5 is the binding confirmation. (See needs_human: the Sprint-1→2 boundary is surfaced to Sam since the AC-1.5 human gate was already cleared at tick 19/20; Sam can redirect before Sprint 2 if desired, else the loop proceeds to the Sprint-2 BUILD.)
+last_green_sha: b0155a6  # M1 Sprint-1 merge (--no-ff); 109 non-solver + 5 @solver green on main, M0 golden e2e intact
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 103, failed: 0, note: 'S7 added 8 seal tests (static x6 = 2 checks x 3 solving modules, runtime x1, clean-FITS x1); all 3 pillars mutation-verified RED then restored. Green WITHOUT the solver (AC 7.5). Run via `make test`.'}
-  - {cmd: 'pytest -m solver', passed: 5, failed: 0, note: 'S3 x2 + S6 x2 + S7 golden-e2e x1. Golden e2e (THE DoD gate) blind-solve residual = 2.081" (< 10" gate; expected ~2-4"; < 5" stretch), actual number always reported via capsys.disabled(). Independently re-rendered+re-solved in REVIEW. Run via `make test-golden`.'}
+  - {cmd: 'pytest -m "not solver"', passed: 109, failed: 0, note: 'M1 S1 added tests/test_real_fixtures.py (6 fixture-integrity guards: BW3 TLE loads+checksums via scene.parse_tle_text [mutation-verified RED on a broken checksum], epoch <2d from DATE-OBS, meta.toml verified-header values, observatory site flagged for Sprint-3 confirm, fetch.sh pins SHA256+two-urls, PROVENANCE records all AC fields + AC-1.5 CLEARED). No product-module change. Run via `make test`.'}
+  - {cmd: 'pytest -m solver', passed: 5, failed: 0, note: 'UNCHANGED from M0 (S3 x2 + S6 x2 + S7 golden-e2e x1). Golden e2e blind-solve residual = 2.081" (< 10" gate). M1 S1 touched no @solver path. Run via `make test-golden`.'}
 plan_file: ~/.claude/plans/plan-the-m1-real-image-snappy-bunny.md
 plan_sha256: 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed
-no_progress_count: 0  # RESET from 1: tick-20's no-merge halt was the pre-flagged TLE WATCH-ITEM Andon, now RESOLVED this turn (a public, no-credential historical TLE was LOCATED — genuine NEW info enabling the build, not spinning). The resumption BUILD tick has frame + TLE both in hand and should merge green; the reset gives Sprint 1 a fair §3.3 budget (a normal REVISE→FIX bounce must not immediately trip §4-#5). A green Sprint-1 merge keeps it at 0.
-open_findings: []  # M1 starts clean (M0 closed at tick 17, ACCEPT). CARRIED M1 watch-items (NOT blocking; only bite once a REAL frame is processed): (1) detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol -> midpoint bias (S4 review) — watch midpoint robustness on the real frame; (2) [benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT).
+no_progress_count: 0  # Sprint-1 merged GREEN this tick (tick 21) → stays 0 (a green merge resets/holds at 0, §3.3). The TLE blocker that raised the gate at tick 20 was resolved + independently re-verified this tick (checksums OK, epoch 0.598d pre-exposure, orbit BW3-consistent); the build then merged green.
+open_findings: []  # M1 starts clean (M0 closed at tick 17, ACCEPT). CARRIED M1 watch-items (NOT blocking; only bite at the named sprint): (1) detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol -> midpoint bias (S4 review) — watch midpoint robustness on the real BW3 trail (4956 px, bright); (2) [benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT); (3) [Sprint 3 / AC 3.1] DATE-OBS=2022-11-18T02:47:16.782 is the exposure START (UTC) NOT the midpoint — midpoint = start + EXPTIME/2 = +5 s; PIN this with fail-loud at AC 3.1 (a 1 s LEO timing error ≈ arcminutes); meta.toml/PROVENANCE record date_obs as START; (4) [Sprint 3] meta.toml observatory site (OAN-SPM +31.0442/−115.4633/2790 m) is `site_confirmed=false` — CONFIRM the exact DDOTI station geodetic coords before pinning the topocentric satellite-truth (LEO parallax is material).
 next_action: >-
-  ✅ TLE RESOLVED (this turn) — a public, no-credential HISTORICAL BlueWalker-3 (NORAD 53807) TLE is IN HAND.
-  Epoch 22321.51776124 = 2022-11-17T12:25:34.6 UTC, only 0.598 d BEFORE the exposure midpoint
-  (2022-11-18T02:47:16.782 UTC) — well inside the ±2-day LEO usability window; checksum-valid (L1=3, L2=5; both 69
-  chars); orbit-sane (i=53.2022°, mean motion 15.18590617 rev/day ≈ BW3 ~550 km LEO); independently corroborated by
-  a sibling archive dump (epoch 22320.728 = 2022-11-16T17:28 UTC, 1.388 d). Build is UNBLOCKED.
-  >>> THE TLE — commit these TWO lines VERBATIM as the M1 satellite-truth fixture (note intl designator 2022-111AL,
-      NOT 2022-111G):
-        1 53807U 22111AL  22321.51776124  .00001408  00000+0  82536-4 0  9993
-        2 53807  53.2022 319.8514 0014272 124.6871 235.5472 15.18590617 10265
-  >>> TLE PROVENANCE (pin into PROVENANCE.md): source = a GitHub read-only mirror (vzlusat/vzlusat1-timepix-decoder)
-      of a CelesTrak active.txt 6-hourly full-catalog dump — raw URL
-      https://raw.githubusercontent.com/vzlusat/vzlusat1-timepix-decoder/master/misc/tle/147.228.97.106/tle/active-2022-11-18-06-05-01.txt
-      (dump downloaded 2022-11-18 06:05 UTC; the file carries the verbatim "BLUEWALKER 3" name line above the 53807
-      element set; data origin CelesTrak / Space-Track). The FILENAME timestamp is the download time; the
-      AUTHORITATIVE epoch is the decoded 22321.51776124. Cross-checked: CelesTrak Wayback group/INTDES snapshots gave
-      only 2.3–2.6 d sets (early side); Zenodo 8102655 ships NO TLE; planet4589/SatNOGS/live CelesTrak = no usable
-      history. For a sub-0.1-d epoch the only path is an authenticated Space-Track GP_HISTORY query — NOT needed for M1.
-  >>> HONEST RESIDUAL CAVEAT (carry into the S5 degradation report): a ~0.6-day-old LEO TLE contributes real
-      along-track propagation error to the residual → name it under the report's "timing / ephemeris uncertainty"
-      source. The M1 residual is the HONEST real-frame number (AC-4.6 plausibility-gated, not a tight residual gate);
-      it will partly reflect TLE age, which is expected + truthful, NOT a defect to hide or flatter.
+  ✅ M1 SPRINT 1 COMPLETE + MERGED (tick 21, @ b0155a6). Frame + TLE both in hand and independently re-verified;
+  fixtures/provenance/live-smoke committed; AC 1.1-1.5 satisfied. The NEXT tick is the SPRINT 2 (ingest) BUILD.
 
-  ✅ AC-1.5 HUMAN GATE CLEARED (tick 19→20) — Sam CONFIRMED the M1 frame + the strict-AC-4.6 approach. Sprints 1→6
-  then run AUTONOMOUSLY frame-in-hand (no further human gate EXCEPT this TLE blocker — once it is resolved).
+  >>> COURTESY CHECKPOINT FOR SAM (Sprint-1→Sprint-2 boundary): the plan's AC-1.5 human andon gate was ALREADY
+  cleared by Sam at tick 19/20 (frame + NORAD id + strict-AC-4.6 approach confirmed; Sprints 1→6 authorized to run
+  autonomously frame-in-hand). The Sprint-1 deliverable is now done and merged green, and PROVENANCE.md records the
+  AC-1.5 sign-off. So no NEW human gate is mechanically required before Sprint 2 — the binding confirmation is
+  Sprint-2 AC 2.5 (the normalized image still blind-solves+detects), not another human stop. This checkpoint is a
+  COURTESY: if Sam wants to re-inspect the committed PROVENANCE.md / fetch.sh / TLE / smoke before ingest, do so now;
+  otherwise the next /autobuild-loop tick proceeds to the Sprint-2 ingest BUILD.
 
-  >>> LOCKED M1 FRAME (gate-ready; AC 1.2 blind-solve + AC 1.3 detect PROVEN on the real frame):
-  - Frame: BW3_DDOTI_data/20221118/20221118T024706C1o.fits.fz (DDOTI camera C1, OAN-SPM San Pedro Mártir, 10 s).
-    Rice-compressed .fits.fz → `funpack` to plain FITS for solve/detect/ingest.
-  - Source: Zenodo record 8102655 (DOI 10.5281/zenodo.8102655, "Raw FITS … BlueWalker 3", CC-BY-4.0). Archive
-    BW3_DDOTI_data.tgz (2,399,378,573 B) at https://zenodo.org/api/records/8102655/files/BW3_DDOTI_data.tgz/content;
-    member size 17,507,520 B, member SHA-256 b6dcf797163fab78adca9316f0dcb18eb29e83c8c398ae325a292fad30519ca1.
-    fetch.sh MUST stream + `tar --include` ONLY this member (NEVER land the 2.4 GB on disk — disk-Andon Kaizen) →
-    funpack. gitignore the .fits.fz binary (fetch on demand); commit fetch.sh + PROVENANCE.md + the TLE.
-  - DATE-OBS=2022-11-18T02:47:16.782 UTC, EXPTIME=10.0 s (MJD-OBS 59901.11616647).
-  - NORAD 53807 = BlueWalker-3. Identity EXTERNAL via the DATASET (header BLKNM='BW3'/VSTNM='BW3' + Zenodo title) —
-    carry from the dataset, NOT a correlator, NOT an OBJECT keyword.
-  - Observatory: OAN-SPM / DDOTI (San Pedro Mártir, MX) ≈ +31.0442 N, −115.4633 W, ~2790 m — CONFIRM the exact DDOTI
-    station geodetic coords in the build before pinning (needed for the topocentric satellite-truth).
-  - Plate scale ~2.0"/px, FOV 3.41° (6144×6220). Blind-solves on the EXISTING 4100 indexes (NO new indexes, NO
-    astrometry.cfg edit). Smoke PROVEN: AC 1.2 solve_pointing → SolveResult 8.3 s, recovered center (305.557,
-    −14.964); AC 1.3 detect_streak → real 4956 px trail @126.2° (adversarial false-lock guard held; star-only
-    siblings → honest DetectFailure). License CC-BY-4.0 (attribute the BW3 DDOTI dataset authors).
+  >>> COMMITTED SPRINT-1 ARTIFACTS (tests/fixtures/real/): bluewalker3_53807.tle (NORAD 53807, epoch 22321.51776124
+  = 2022-11-17T12:25:34Z = 0.598d pre-exposure, checksum-valid, validates via scene.parse_tle_text); PROVENANCE.md
+  (full source/retrieval/identity/TLE/site/smoke + AC-1.5 CLEARED); fetch.sh (streams ONLY the 17.5 MB member —
+  member SHA256 b6dcf797…19ca1 — never lands the 2.4 GB; two urls; funpack; recipe RUN LIVE this tick); meta.toml
+  (verified header values for the Sprint-4 --image/--meta path). The .fits/.fits.fz are gitignored (*.fits) → run
+  fetch.sh to obtain the frame on demand. Live smoke re-proven this tick: solve_pointing→SolveResult center
+  (305.557,−14.964); detect_streak→StreakDetection 4956 px @126.16°.
 
-  >>> NO-HEADER-WCS ADAPTATION (Sam-approved "keep AC-4.6 STRICT"). DDOTI frames carry NO header WCS (0/132) — only
-  the mount commanded pointing STRCURA=303.6068°, STRCUDE=−16.2040°. So the plan's "header-WCS pointing-truth" is
-  REPLACED everywhere it was used (AC-4.6 plausibility gate AND the report's pointing-vs-timing diagnostic) by
-  POINTING-TRUTH = commanded pointing (STRCURA/STRCUDE) + a FIXED C1 camera offset. The C1 offset is NOT publicly
-  documented (DDOTI papers give only the 6.8°×10.2° footprint envelope; the real offset is diagonal +1.88°E/+1.24°N
-  ≈2.25°, implying an undocumented grid rotation → a doc-based strict gate would false-fail). DERIVE the fixed C1
-  offset EMPIRICALLY + NON-CIRCULARLY: blind-solve ≥3 OTHER C1 frames from the SAME archive (different times/nights),
-  compute offset_i = (recovered_center_i − that frame's STRCURA/STRCUDE), CONFIRM cross-frame consistency (scatter
-  <~0.1°; the adapter is mechanically rigid — high scatter ⇒ Andon), take the mean as the fixed C1 offset. Then for
-  the GATE frame: expected_C1_center = its STRCURA/STRCUDE + mean_offset; AC-4.6 STRICT = |recovered_center −
-  expected_C1_center| ≤ 0.5×fov_deg (1.7°). Non-circular (offset from OTHER frames), strict, still catches a gross
-  wrong-field lock. Do NOT use this frame's own (recovered − commanded) as the reference — circular (trivial self-match).
-
-  >>> TLE (RESOLVED — see the ✅ TLE RESOLVED block at the top of next_action): the historical NORAD-53807 TLE
-  bracketing 2022-11-18T02:47:16 UTC is in hand (epoch 22321.51776124, 0.598 d pre-exposure, checksum-valid). Commit
-  the two verbatim lines as the satellite-truth fixture, pin the source/epoch into PROVENANCE.md, and propagate via
-  skyfield TOPOCENTRIC (OAN-SPM site) to the exposure midpoint for truth.json["scored_truth"]. Do NOT re-search for
-  a TLE (it's found); do NOT substitute the far-epoch current TLE.
-
-  >>> BUILD SEQUENCE (plan plan-the-m1-real-image-snappy-bunny.md, now frame-in-hand): S1 = fixtures/real/ +
-  fetch.sh + PROVENANCE.md (AC 1.5 sign-off recorded) + commit TLE + smoke (make test green); S2 = ingest
-  (.fits.fz→funpack→2-D float32, WCS-stripped image.fits + truth.json; EXTEND the seal over ingest; AC 2.5 = the
-  NORMALIZED image still solves+detects — BINDING; if it fails, REJECT the frame→back to S1); S3 = real-truth
-  (pointing-truth = commanded+empirical-C1-offset; satellite-truth = BW3 TLE → skyfield TOPOCENTRIC at exposure
-  midpoint → truth.json scored_truth; reuse render._propagate_satellite as a behavior-preserving extraction —
-  render tests + golden e2e stay green); S4 = run.py --image/--meta + AC-4.6 STRICT (above); S5 = honest
-  degradation report (real residual_arcsec always; 5 named sources; pointing-vs-timing decomp using commanded+offset,
-  no json.load outside score.py); S6 = numeric residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL. GENBA each tick:
-  clean tree, only loop-authored commits since last_green, re-hash plan 955c27e3, baseline 103+5 green.
+  >>> SPRINT 2 (ingest) BUILD CONTRACT (plan Sprint 2, ACs 2.1-2.5; HIGH-RISK = EXTENDS the seal over a NEW writer
+  → mandatory 2nd independent LOCAL review): TDD ingest.ingest_external_image(image_path, meta, out_dir) →
+  IngestResult. Read the real FITS (astropy.io.fits) → 2-D float32: SELECT the science image HDU (first 2-D image
+  HDU, or one named in meta — here HDU 0); APPLY BSCALE/BZERO when casting integer→float32 (this frame is BITPIX 16
+  / BZERO 32768 unsigned — let astropy do do_not_scale_image_data=False); canonicalize NATIVE byte order; replace
+  NON-FINITE pixels (NaN/Inf) with the frame median; PRESERVE orientation (NO flip/transpose). Write a WCS-FREE
+  image.fits via the factored write_clean_fits (extract render.py:351-356 as a behavior-preserving helper — render
+  tests + golden e2e MUST stay green) + a truth.json the scorer can read. EXTEND the seal: parametrize test_seal.py
+  clean-FITS + static-import over ingest; add the "json.load only in score.py across src/" assertion matching the
+  AST json.load/json.loads token SPECIFICALLY (NOT a bare `load` substring → would false-positive on skyfield
+  load.timescale() render.py:138 + astropy reads). AC 2.5 (@solver, the BINDING de-risk): re-run solve_pointing +
+  detect_streak on the NORMALIZED ingest output (not just the raw candidate) → both non-failure; if AC 2.5 FAILS,
+  the frame is REJECTED → return to Sprint 1 for the next candidate (do NOT weaken the seal or the gate to pass it).
+  To exercise ingest, fetch the frame via tests/fixtures/real/fetch.sh (skip-if-frame-missing for the @solver path).
 
   NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load ONLY in score.py; solve/detect/
   measure never read truth, never take a header WCS; the solver ALWAYS gets a WCS-stripped image; the NEW ingest
@@ -99,9 +60,21 @@ next_action: >-
   extractions (render tests + golden e2e stay green); reuse solve/detect/score verbatim. (e) YAGNI — no non-FITS
   ingest beyond the funpack this frame needs, no streak-vs-catalogue matcher (PHASE 2, scoped-only). (f) ALL review
   LOCAL/FREE (/code-review ultra BANNED); NEVER auto-push (v0.1.1 LOCAL only); NEVER write a handoff file. Carry the
-  2 M1 watch-items (open_findings note above).
-human_gate: false  # CLEARED this turn — the TLE WATCH-ITEM that raised it at tick-20 is RESOLVED: a public, no-credential historical NORAD-53807 TLE (epoch 22321.51776124 = 2022-11-17T12:25:34.6 UTC, 0.598 d pre-exposure, checksum-valid, independently corroborated) is recorded in next_action's ✅ TLE RESOLVED block. No Space-Track creds needed. The Sprint-1 BUILD proceeds frame + TLE in hand.
-tick_lock: "tick-21 M1-Sprint-1 BUILD (frame+TLE in hand); branch feat/m1-s1-real-frame"  # set at tick-21 begin: TLE independently re-verified (checksums L1=3/L2=5 OK, epoch 22321.51776124 = 2022-11-17T12:25:34Z = 0.598d pre-exposure, orbit i=53.2°/mm=15.186 → ~510 km LEO BW3-consistent); baseline GREEN 103+5; building the Sprint-1 fixtures + live smoke.
+  2 M1 watch-items (open_findings note above) + the Sprint-3 timing/site confirms (DATE-OBS is exposure START not
+  midpoint → midpoint = start + EXPTIME/2, pinned with fail-loud at AC 3.1; meta.toml site_confirmed=false).
+
+  >>> REMAINING M1 BUILD SEQUENCE (plan plan-the-m1-real-image-snappy-bunny.md): S2 = ingest (THIS next tick); S3 =
+  real-truth (pointing-truth = commanded STRCURA/STRCUDE + empirical-C1-offset; satellite-truth = BW3 TLE → skyfield
+  TOPOCENTRIC at exposure midpoint → truth.json scored_truth; reuse render._propagate_satellite behavior-preserving;
+  PIN DATE-OBS=start semantics + CONFIRM the exact DDOTI site coords); S4 = run.py --image/--meta + AC-4.6 STRICT
+  (derive the fixed C1 offset NON-CIRCULARLY from ≥3 OTHER C1 frames, scatter <~0.1° or Andon; gate = |recovered −
+  (commanded+mean_offset)| ≤ 0.5×fov_deg = 1.7°; do NOT use this frame's own recovered−commanded = circular); S5 =
+  honest degradation report (real residual_arcsec always; 5 named sources incl. ~0.6d TLE-age along-track error
+  under timing/ephemeris uncertainty; pointing-vs-timing decomp, no json.load outside score.py); S6 = numeric
+  residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL. GENBA each tick: clean tree, only loop-authored commits since
+  last_green, re-hash plan 955c27e3, baseline green.
+human_gate: false  # Sprint-1 merged green; no Andon. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20) and is now recorded in PROVENANCE.md. The Sprint-1→Sprint-2 boundary is surfaced to Sam in needs_human (a courtesy checkpoint, NOT a hard halt — the binding confirmation is Sprint-2 AC 2.5, not another human gate).
+tick_lock: null  # cleared at tick-21 end (Sprint-1 BUILD complete + merged green; feat/m1-s1-real-frame deleted post-merge; no live build in progress)
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
@@ -743,3 +716,9 @@ records its actual epoch + source in PROVENANCE.md + writes fetch.sh (stream + t
 17.5 MB member → funpack; pinned member SHA-256 b6dcf797…19ca1) + meta.toml + the smoke (AC 1.2 solve /
 AC 1.3 detect already PROVEN on the raw frame) + AC 1.5 sign-off → provisional Sprint-1 lock → Sprint 2.
 ```
+
+- [tick 21 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for M1 Sprint 1 with the frame confirmed (tick 19/20) and the committed state claiming the TLE blocker RESOLVED — but the decisions log had NO tick recording that resolution (the TLE-resolved frontmatter rode in via commit 381810b without a ReAct triple), so the FIRST job is to verify the claim against ground truth, NOT trust the narrative. Verify §3.5 gates + baseline + INDEPENDENTLY validate the committed TLE before building satellite-truth on it. → Action(Read state IN FULL + config + the M1 plan IN FULL; git status --porcelain + HEAD + branches + tags + commits since d58f94f; shasum the M1 plan; `make test` + `make test-golden`; independently check the two committed TLE lines — checksum, epoch decode, orbit sanity — in a scratch python) → Observation: clean tree on main @ 381810b; all commits since d58f94f are loop-authored chore (no foreign branch, only `main` + tag v0.1.0); plan re-hash 955c27e3… MATCHES (NOT stale); baseline GREEN 103 non-solver + 5 @solver (golden e2e 2.081"); no_progress 0. TLE VERIFIED GENUINE: L1 cksum 3==3, L2 cksum 5==5, both 69 chars; epoch 22321.51776124 decodes to 2022-11-17T12:25:34Z = 0.598 d before the exposure; orbit i=53.2°, mm=15.186 rev/day → derived a=6888 km → ~510 km LEO, BW3-consistent. The "RESOLVED" frontmatter is TRUE. Set tick_lock + committed begin-marker 089b7ba on main; cut feat/m1-s1-real-frame.
+- [tick 21 | BUILD] Thought: §3.2 BUILD tick — build the Sprint-1 deliverable (fixtures + provenance + live smoke), reusing solve_pointing/detect_streak VERBATIM; prove AC 1.2/1.3 genchi-genbutsu rather than inherit the recorded smoke. The frame is gitignored (*.fits) + multi-GB-archived → fetch.sh streams ONLY the single member. → Action(stream + tar -xzO the single 17.5 MB member from Zenodo → verify SHA256 → funpack → read the header → run solve_pointing + detect_streak LIVE on the raw funpacked frame; write tests/fixtures/real/{bluewalker3_53807.tle, PROVENANCE.md, fetch.sh, meta.toml}; validate the TLE through scene.parse_tle_text; write tests/test_real_fixtures.py — 6 non-solver fixture-integrity guards) → Observation: streamed member byte-EXACT (17,507,520 B, SHA256 b6dcf797…19ca1 == pinned). Header confirmed every state fact: DATE-OBS=2022-11-18T02:47:16.782 (START), EXPTIME=10.0, MJD 59901.116, NO header WCS (0 keys), STRCURA=303.607/STRCUDE=−16.204, BLKNM/VSTNM='BW3', 6144×6220 BITPIX16 BZERO32768, TELESCOP=DDOTI/INSTRUME=C1. LIVE SMOKE PASS: AC 1.2 solve_pointing→SolveResult 8.4 s center (305.557,−14.964) [== recorded]; AC 1.3 detect_streak→StreakDetection 3.4 s, 4956 px @126.16° [== recorded]. Committed TLE validates via parse_tle_text. 6 new tests green; mutation-probed the TLE-checksum test (9993→9990 → RED at scene.py:183, restore → GREEN, file SHA-restored) = load-bearing. Full suite 109 non-solver + 5 @solver green; scope = ONLY tests/fixtures/real/ + tests/test_real_fixtures.py (git diff main -- src/ EMPTY → no module touched); seal intact (json.load only score.py:64).
+- [tick 21 | REVIEW] Thought: LOW-RISK increment (fixtures + a fixture-integrity test; ZERO source change; seal + all solving contracts untouched by construction → the high-risk 2nd-pass trigger is NOT met) → a single thorough LOCAL adversarial review (free, local; the Task/Agent spawn tool was unavailable this env → ran the review directly, genchi-genbutsu, per konnyaku "when the workshop fights you"). Probe the honesty-critical claims. → Action(PROBE 1 external identity: re-read the header → BLKNM/VSTNM='BW3', OBJECT absent → identity carried by the DATASET, no correlator run, EXTERNAL ✓; PROBE 2 non-fabrication: grep fixtures for any residual/score number → NONE committed [only the prose "reproduce the M1 residual"] ✓; PROBE 3 blind solve: smoke fed only fov_deg scale hint, no RA/Dec prior; meta records commanded pointing but never passes it to the solver ✓; PROBE 4 fetch integrity: verify_sha256 per-url + exit 1 loud on mismatch ✓) → Observation: VERDICT ACCEPT. 1 NIT found + FIXED in-tick: the fixture-test constant was named EXPOSURE_MIDPOINT_UTC but held the DATE-OBS START value (start-vs-midpoint is a Sprint-3 AC-3.1 concern, not Sprint 1) → renamed to DATE_OBS_START_UTC + commented "midpoint = start + EXPTIME/2 (pinned in Sprint 3)" so no misleading label carries forward (konnyaku smoothing). Re-ran: 6/6 + 109 non-solver green.
+- [tick 21 | INTEGRATE] Thought: PHASE-5 gate met (ACCEPT + the NIT fixed + both suites green + the AC-1.5 human frame-gate ALREADY cleared by Sam at tick 19/20, recorded in PROVENANCE.md). The Sprint-1 deliverable is unambiguously correct (real fixtures, smoke re-proven, no source touched) → merge green; surface the Sprint-1→2 boundary to Sam as a courtesy (the human gate was already given; the binding confirmation is Sprint-2 AC 2.5, not a new stop). → Action(commit the increment on feat 74dc0fc; git merge --no-ff feat/m1-s1-real-frame → main; `make test` + `make test-golden` on main; git branch -d feat/m1-s1-real-frame) → Observation: merged @ b0155a6; 109 non-solver + 5 @solver green on main; M0 golden e2e intact; branch deleted, only `main` remains. Sprint 1 ≠ a milestone (v0.1.1 is Sprint 6) → no tag. no_progress_count stays 0 (green merge).
+- [tick 21 | HANSEI] What worked: the FIRST genba move — distrusting the "TLE RESOLVED" frontmatter because no decisions-log tick recorded the resolution, and independently re-deriving the checksum + epoch + orbit before building on it — is exactly the genchi-genbutsu the honesty milestone demands; the claim turned out TRUE, but verifying it (not inheriting it) is what makes the eventual residual trustworthy. Re-running the live smoke rather than copying the recorded (305.557,−14.964) confirmed the frame genuinely blind-solves THIS tick, and the byte-exact member SHA proved the fetch.sh streaming recipe before committing it. Honest scoping: I caught + fixed a misleading START-vs-MIDPOINT constant name in-tick (cheap, honesty-relevant) but correctly LEFT the actual timing-semantics resolution to Sprint-3 AC 3.1 (the plan's home for it) rather than over-reaching. Process gap surfaced (Kaizen): a prior turn mutated the state frontmatter (TLE resolved, counters reset) and committed it WITHOUT an accompanying decisions-log ReAct triple — a half-recorded panel; this tick's GENBA had to reconstruct + verify the claim from scratch. The standing discipline holds: every state mutation that changes the build's premise MUST carry its own decisions-log triple, so a fresh-context tick can trust the log. Env note: the general-purpose Agent/Task spawn tool was unavailable this session → the REVIEW ran directly in-parent (still local + free, cost guard honored); for a HIGH-RISK sprint (S2 ingest extends the seal; S3 extracts render helpers; S4 produces the residual) a 2nd independent review is mandatory — if the spawn tool is still unavailable then, run two genuinely separate review passes (e.g. a fresh re-derivation from the raw frame) rather than skip the second pass. Anti-spin: green merge → no_progress 0. Per §3.2 this BUILD tick ENDS at the green merge; Sprint 2 (ingest) is the NEXT tick — surfaced to Sam at the Sprint-1→2 courtesy checkpoint.
