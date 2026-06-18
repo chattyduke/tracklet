@@ -2,7 +2,7 @@
 current_milestone: M1
 current_increment: "M1 Sprint 2 BUILD — ingest: real FITS → normalized, WCS-stripped clean image + truth.json (seal-preserving). TDD ingest.ingest_external_image (HDU-select, BSCALE/BZERO→float32, native byte order, non-finite→median, orientation-preserved) + write_clean_fits; EXTEND the seal over ingest; AC 2.5 (@solver) = the NORMALIZED image still blind-solves+detects = the BINDING confirmation of the provisional Sprint-1 lock. plan plan-the-m1-real-image-snappy-bunny.md"
 last_increment_id: "M1 S1 — real-frame acquire + smoke + lock (BlueWalker-3 / DDOTI), MERGED @ b0155a6"
-phase: HANSEI  # M1 Sprint 1 BUILD COMPLETE this tick (tick 21): TLE independently re-verified, frame+TLE in hand, fixtures+provenance+live-smoke committed, MERGED green. Tick ENDS here (§3.2 BUILD tick = green merge).
+phase: BUILD  # tick 22 BUILD STARTED — M1 Sprint 2 (ingest). Cut feat/m1-s2-ingest; begin-marker committed on main.
 status: PLAN_LOCKED_AWAITING_BUILD  # Sprint 1 DONE+merged; the M1 plan is consumed sprint-by-sprint (plan_sha256 unchanged), so the NEXT tick is the Sprint-2 ingest BUILD. The Sprint-1 lock is PROVISIONAL — Sprint-2 AC 2.5 is the binding confirmation. (See needs_human: the Sprint-1→2 boundary is surfaced to Sam since the AC-1.5 human gate was already cleared at tick 19/20; Sam can redirect before Sprint 2 if desired, else the loop proceeds to the Sprint-2 BUILD.)
 last_green_sha: b0155a6  # M1 Sprint-1 merge (--no-ff); 109 non-solver + 5 @solver green on main, M0 golden e2e intact
 green_suites:
@@ -74,7 +74,7 @@ next_action: >-
   residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL. GENBA each tick: clean tree, only loop-authored commits since
   last_green, re-hash plan 955c27e3, baseline green.
 human_gate: false  # Sprint-1 merged green; no Andon. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20) and is now recorded in PROVENANCE.md. The Sprint-1→Sprint-2 boundary is surfaced to Sam in needs_human (a courtesy checkpoint, NOT a hard halt — the binding confirmation is Sprint-2 AC 2.5, not another human gate).
-tick_lock: null  # cleared at tick-21 end (Sprint-1 BUILD complete + merged green; feat/m1-s1-real-frame deleted post-merge; no live build in progress)
+tick_lock: {pid: 22, started: "2026-06-18 tick 22 — M1 Sprint 2 ingest BUILD"}  # cleared at tick-22 end
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
