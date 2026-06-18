@@ -1,0 +1,8 @@
+# source=CelesTrak active.txt 6-hourly full-catalog dump (data origin CelesTrak / Space-Track), via a GitHub read-only mirror
+# mirror_url=https://raw.githubusercontent.com/vzlusat/vzlusat1-timepix-decoder/master/misc/tle/147.228.97.106/tle/active-2022-11-18-06-05-01.txt
+# dump_downloaded_utc=2022-11-18T06:05:01  norad=53807  intl_designator=2022-111AL
+# epoch=22321.51776124 (2022-11-17T12:25:34.6 UTC) = 0.598 d BEFORE the exposure midpoint 2022-11-18T02:47:16.782 UTC
+# checksums verified (L1=3, L2=5; both 69 chars); orbit i=53.2022 deg, mean motion 15.18590617 rev/day (~510 km LEO, BW3-consistent)
+BLUEWALKER 3
+1 53807U 22111AL  22321.51776124  .00001408  00000+0  82536-4 0  9993
+2 53807  53.2022 319.8514 0014272 124.6871 235.5472 15.18590617 10265

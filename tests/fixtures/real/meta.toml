@@ -1,0 +1,54 @@
+# meta.toml — M1 real-frame metadata for the run.py --image/--meta path (consumed from Sprint 4 on).
+# Every value below is from the FITS header (verified this tick by reading the funpacked frame) except
+# the observatory site, which the header does NOT carry (flagged for Sprint-3 confirmation — see note).
+
+[frame]
+# The retrieved + funpacked plain FITS (produced by fetch.sh; gitignored *.fits).
+filename = "20221118T024706C1o.fits"
+fits_fz_filename = "20221118T024706C1o.fits.fz"
+member_sha256 = "b6dcf797163fab78adca9316f0dcb18eb29e83c8c398ae325a292fad30519ca1"
+naxis1 = 6144
+naxis2 = 6220
+bitpix = 16
+bzero = 32768.0   # unsigned-16 frame; ingest (Sprint 2) applies BSCALE/BZERO when casting to float32
+bscale = 1.0
+science_hdu = 0   # single-HDU PRIMARY image; data is in HDU 0
+
+[timing]
+# DATE-OBS is the exposure START on the UTC scale (DDOTI convention). EXPTIME in seconds.
+# Sprint 3 (AC 3.1) pins start-vs-midpoint semantics + fails loud on ambiguity; midpoint = start + EXPTIME/2.
+date_obs = "2022-11-18T02:47:16.782"   # exposure start, UTC
+exptime_s = 10.0
+mjd_obs = 59901.11616647
+
+[pointing]
+# DDOTI frames carry NO header WCS (verified: 0 WCS keys). Pointing-truth = commanded mount pointing
+# (STRCURA/STRCUDE) + a FIXED C1 camera offset DERIVED EMPIRICALLY + NON-CIRCULARLY in Sprint 4 (AC 4.6)
+# by blind-solving >=3 OTHER C1 frames. Do NOT feed this into the blind solve (it gets only a WCS-free
+# image + a coarse fov hint).
+header_wcs_present = false
+commanded_ra_deg = 303.6067812823882    # STRCURA
+commanded_dec_deg = -16.203963888888893  # STRCUDE
+
+[solver]
+# Coarse blind scale hint only (no position/orientation prior). DDOTI C1 plate scale ~2.0"/px, FOV ~3.41 deg.
+fov_deg = 3.41
+
+[satellite]
+# Identity is EXTERNAL via the dataset (header BLKNM='BW3'/VSTNM='BW3' + Zenodo title), NOT a correlator.
+norad_id = 53807
+name = "BLUEWALKER 3"
+intl_designator = "2022-111AL"
+tle_file = "bluewalker3_53807.tle"
+tle_epoch = "22321.51776124"   # 2022-11-17T12:25:34.6 UTC, 0.598 d before the exposure midpoint
+
+[observatory]
+# OAN-SPM / DDOTI, San Pedro Martir, Baja California, Mexico.
+# NOTE: the FITS header does NOT record the site geodetic coords; these are the DOCUMENTED OAN-SPM
+# values and MUST be confirmed to the exact DDOTI station before the Sprint-3 topocentric propagation
+# is pinned (LEO parallax makes the site material). Flagged as a Sprint-3 confirmation item.
+name = "OAN-SPM / DDOTI (San Pedro Martir, MX)"
+lat_deg = 31.0442
+lon_deg = -115.4633
+elev_m = 2790.0
+site_confirmed = false   # Sprint 3 confirms the exact DDOTI station coords before pinning truth
