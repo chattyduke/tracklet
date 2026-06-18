@@ -83,10 +83,15 @@ plausibility-gated, not a tight residual gate); it will partly reflect TLE age, 
 
 ## Observatory site
 
-OAN-SPM / DDOTI, San Pedro Martir, Baja California, Mexico ≈ **+31.0442° N, −115.4633° W, ~2790 m**.
-**The FITS header does not record the site geodetic coords** — these are the documented OAN-SPM values and must
-be confirmed to the **exact DDOTI station** before the Sprint-3 topocentric propagation is pinned (LEO parallax
-makes the site material). Flagged in `meta.toml` (`site_confirmed = false`) as a Sprint-3 confirmation item.
+OAN-SPM / DDOTI, San Pedro Martir, Baja California, Mexico = **+31.044333° N, −115.46375° W, 2830 m**
+(31° 02′ 39.60″ N / 115° 27′ 49.50″ W). **CONFIRMED (Sprint 3, tick 23)** to the published OAN-SPM position
+([airmass.org/observatories/spm](https://airmass.org/observatories/spm), corroborated by OAN-UNAM site listings);
+DDOTI sits on the OAN-SPM site. **The FITS header does not record the site geodetic coords**, so this is the
+published *observatory* position, not a per-pier survey — the residual uncertainty within the ~hundred-metre
+OAN-SPM campus is <~25″ for the ~510 km BW3 LEO (overhead worst case), far below the dominant ~arcminute TLE-age
+along-track term (0.598 d). LEO parallax makes the site material (a ~63 m error ⇒ up to ~25″ apparent shift vs
+the 10″ gate), which is why the earlier placeholder (31.0442 / −115.4633 / 2790 m) was confirmed-to-source.
+`meta.toml` now records `site_confirmed = true`.
 
 ## Smoke verification (live, this tick — AC 1.2 / AC 1.3)
 

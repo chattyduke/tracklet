@@ -1,9 +1,10 @@
 """score — arcsecond residual vs the sealed truth (S5).
 
 Contract: ``score(measured, truth_path) -> ScoreResult``. ``score._load_truth`` is the SOLE reader
-of ``truth.json`` in the whole repo besides ``render`` (the writer) — every other leaf module
-(solve_pointing, detect_streak, measure_position) is structurally sealed away from truth, so the
-non-circularity argument lives entirely here.
+of ``truth.json`` in the whole repo. The truth WRITERS are ``render`` (synthetic path), ``ingest``
+(M1 real-frame clean image), and ``realtruth`` (M1 real-frame TLE→skyfield truth) — none of them
+deserialize truth; every solving leaf (solve_pointing, detect_streak, measure_position) is
+structurally sealed away from truth, so the non-circularity argument lives entirely here.
 
 score reads the sealed ``scored_truth`` RA/Dec (the satellite position at the exposure MIDPOINT),
 the measured position is the independent recovery, and the residual is the on-sky great-circle

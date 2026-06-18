@@ -238,6 +238,21 @@ def test_static_solving_module_does_not_import_ingest():
         assert "ingest" not in source, f"{module.__name__} names 'ingest'"
 
 
+def test_static_solving_module_does_not_import_realtruth():
+    """M1 Sprint 3 — the forbidden-import list is EXTENDED over the THIRD writer, realtruth (it writes
+    the real-frame truth.json from the TLE). Symmetric to ingest (AC 2.3): no solving module names or
+    imports realtruth. realtruth is a truth WRITER (json.dump only); a solving module reaching it would
+    be a seal smell even though realtruth itself never deserializes truth."""
+    for module in _SOLVING_MODULES:
+        imported = _imported_names(module)
+        for forbidden in ("realtruth", "tracklet.realtruth"):
+            assert not any(
+                name == forbidden or name.endswith("." + forbidden) for name in imported
+            ), f"{module.__name__} must not import {forbidden}: imports={imported}"
+        source = Path(module.__file__).read_text()
+        assert "realtruth" not in source, f"{module.__name__} names 'realtruth'"
+
+
 # --- The repo-wide json.load guard (AC 2.4) ----------------------------------------------------
 # score is the SOLE truth DESERIALIZER. We prove it across ALL of src/ by an AST scan for the
 # json.load / json.loads attribute-call token SPECIFICALLY — NOT a bare `load` substring, which would

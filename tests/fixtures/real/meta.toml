@@ -43,12 +43,18 @@ tle_file = "bluewalker3_53807.tle"
 tle_epoch = "22321.51776124"   # 2022-11-17T12:25:34.6 UTC, 0.598 d before the exposure midpoint
 
 [observatory]
-# OAN-SPM / DDOTI, San Pedro Martir, Baja California, Mexico.
-# NOTE: the FITS header does NOT record the site geodetic coords; these are the DOCUMENTED OAN-SPM
-# values and MUST be confirmed to the exact DDOTI station before the Sprint-3 topocentric propagation
-# is pinned (LEO parallax makes the site material). Flagged as a Sprint-3 confirmation item.
+# OAN-SPM / DDOTI, San Pedro Martir, Baja California, Mexico. DDOTI sits on the OAN-SPM site.
+# CONFIRMED (Sprint 3, tick 23): the published OAN-SPM geodetic coordinates from airmass.org
+# (https://airmass.org/observatories/spm: 31 deg 02' 39.60" N / 115 deg 27' 49.50" W / 2830 m;
+# decimal 31.044333 / -115.46375 / 2830) — corroborated by the OAN/UNAM site listings. These
+# replace the earlier ~placeholder values (31.0442 / -115.4633 / 2790 m). The FITS header carries
+# NO site coords, so the site is the published observatory position, not a per-pier survey; the
+# residual uncertainty WITHIN the ~hundred-metre OAN-SPM campus is <~25" for the ~510 km BW3 LEO
+# (overhead worst case), far below the DOMINANT ~arcminute TLE-age along-track term (0.598 d) named
+# in the Sprint-5 degradation report. LEO parallax makes the site material: a ~63 m site error =>
+# up to ~25" apparent shift (vs the 10" gate), which is why the placeholder was confirmed-to-source.
 name = "OAN-SPM / DDOTI (San Pedro Martir, MX)"
-lat_deg = 31.0442
-lon_deg = -115.4633
-elev_m = 2790.0
-site_confirmed = false   # Sprint 3 confirms the exact DDOTI station coords before pinning truth
+lat_deg = 31.044333
+lon_deg = -115.46375
+elev_m = 2830.0
+site_confirmed = true   # confirmed to the published OAN-SPM position (airmass.org / OAN-UNAM), tick 23
