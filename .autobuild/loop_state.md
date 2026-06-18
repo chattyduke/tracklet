@@ -1,8 +1,8 @@
 ---
 current_milestone: M1
-current_increment: "M1 Sprint 1 — acquire + smoke-verify + LOCK ONE real public-archive FITS (header WCS + precise UTC + externally-established NORAD id); HUMAN ANDON GATE before Sprint 2 (plan plan-the-m1-real-image-snappy-bunny.md, target tag v0.1.1)"
+current_increment: "M1 Sprint 1→6 BUILD — frame LOCKED + AC-1.5 CONFIRMED (BlueWalker-3 DDOTI 20221118T024706C1o, NORAD 53807, Zenodo 8102655, CC-BY); build fixtures→ingest→real-truth→run→report→residual→tag v0.1.1, AC-4.6 STRICT via empirical C1 offset (no header WCS); plan plan-the-m1-real-image-snappy-bunny.md"
 last_increment_id: "S7 seal tests + golden e2e + README/docs — M0 COMPLETE, tagged v0.1.0"
-phase: BUILD  # tick 19 BUILD tick HALTED at the M1 Sprint-1 human andon gate during ACQUISITION — see needs_human / decisions log. No product code written (Sprint 1 adds only fixtures+provenance, which require a confirmed frame first). The Sprint-1 BUILD resumes the moment Sam supplies/approves a frame+NORAD id (the engine's planned Sprint-1 hard stop is acquisition+human-confirm).
+phase: BUILD  # AC-1.5 gate CLEARED (frame confirmed: BlueWalker-3 DDOTI — see next_action's LOCKED M1 FRAME block). The Sprint-1 BUILD resumes frame-in-hand; Sprints 1→6 run autonomously (only the TLE watch-item may Andon).
 status: PLAN_LOCKED_AWAITING_BUILD  # UNCHANGED: Sprint 1 is NOT complete — it is blocked at frame acquisition. The next tick still owes the Sprint-1 BUILD (write fixtures/provenance + smoke + AC 1.5 sign-off) once a frame is in hand.
 last_green_sha: d58f94f854d101cec414eb037866d07257c53293
 green_suites:
@@ -10,52 +10,75 @@ green_suites:
   - {cmd: 'pytest -m solver', passed: 5, failed: 0, note: 'S3 x2 + S6 x2 + S7 golden-e2e x1. Golden e2e (THE DoD gate) blind-solve residual = 2.081" (< 10" gate; expected ~2-4"; < 5" stretch), actual number always reported via capsys.disabled(). Independently re-rendered+re-solved in REVIEW. Run via `make test-golden`.'}
 plan_file: ~/.claude/plans/plan-the-m1-real-image-snappy-bunny.md
 plan_sha256: 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed
-no_progress_count: 1  # tick 19: a BUILD tick that produced NO green merge (acquisition blocked at the human gate) → honest increment 0→1 per §3.3. NOTE: this is a PLANNED human-andon halt (the Sprint-1 gate the plan + operator brief mandate), NOT an engineering spin-failure — but the counter is mechanical so it ticks. ⚠️ The NEXT build tick that again fails to merge green would reach no_progress_count=2 → the §4-#5 hard human gate. The intended resolution is NOT another autonomous acquisition attempt (the blocker is external — a sourceable frame, see needs_human) but Sam supplying/approving a frame so the Sprint-1 BUILD can complete and merge green (which resets to 0). Do NOT auto-retry web-sourcing on the next tick without new information; that would burn toward the spin gate without progress.
+no_progress_count: 0  # RESET from 1: tick-19's no-merge halt was a PLANNED human-andon gate (frame acquisition), now RESOLVED by Sam's AC-1.5 confirmation — NOT spinning. The next tick is a genuine Sprint-1 BUILD with a confirmed, smoke-proven frame, so it gets a clean §3.3 budget. (§4-#5 still trips at 2 consecutive no-merge BUILD ticks from here — e.g. if the TLE watch-item blocks Sprint 1 twice.)
 open_findings: []  # M1 starts clean (M0 closed at tick 17, ACCEPT). CARRIED M1 watch-items (NOT blocking; only bite once a REAL frame is processed): (1) detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol -> midpoint bias (S4 review) — watch midpoint robustness on the real frame; (2) [benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT).
 next_action: >-
-  ⛔ HUMAN ANDON GATE RAISED (tick 19, BUILD tick) — the Sprint-1 frame-acquisition hard stop the plan + operator
-  brief mandate. The loop did a genuine, time-boxed sourcing effort and could NOT confidently source ONE real
-  public FITS frame that satisfies ALL of AC 1.1–1.4 simultaneously: (header WCS) + (precise UTC DATE-OBS/EXPTIME)
-  + (a satellite trail whose NORAD id is EXTERNALLY established — published/cataloged by someone else, NOT
-  recovered by us; building a TLE→streak correlator is PHASE 2, explicitly out of scope). Per the plan's explicit
-  time-box rule ("if you cannot confidently source a frame … STOP and return needs_human … NEVER fabricate an
-  identity or a residual"), the loop HALTED rather than fabricate identity. NO product code was written; the
-  feat/m1-s1-real-frame branch was cut then deleted clean (0 commits); tree clean on main.
-  >>> RESUMPTION CONTRACT (the NEXT build tick, once Sam supplies/approves a frame): do NOT re-run an open-ended
-  web search (the blocker is external — see needs_human + the sourcing landscape in the tick-19 decisions log;
-  another blind autonomous attempt with no new info would burn toward the §4-#5 spin gate at no_progress_count=2).
-  Instead, with Sam's confirmed frame in hand: (1) fetch/commit it per AC 1.1 (DEFAULT fetch.sh w/ pinned SHA256 +
-  TWO urls primary+mirror; inline-commit only if ≤~5 MB AND license permits); (2) smoke-verify it blind-SOLVES
-  (solve_pointing(<raw>, {"fov_deg": <hint>}) → SolveResult not SolveFailure, AC 1.2) AND DETECTS
-  (detect_streak(<raw>) → StreakDetection not DetectFailure, AC 1.3), reusing both VERBATIM — solve-field solves
-  blind by default even with a header WCS present; (3) write tests/fixtures/real/PROVENANCE.md (source URL, exact
-  retrieval steps, DATE-OBS/EXPTIME, NORAD id + TLE epoch + TLE source, observatory site, header-WCS presence) +
-  commit the TLE; (4) record AC 1.5 human sign-off in PROVENANCE.md; (5) confirm `make test` still green (only
-  docs/fixtures added). THEN the Sprint-1 lock is PROVISIONAL — Sprint 2's AC 2.5 (the NORMALIZED / WCS-stripped
-  image still blind-solves + detects) is the BINDING confirmation; if AC 2.5 fails, REJECT the frame and return to
-  Sprint 1 for the next candidate. If the smoke FAILS to solve/detect on the supplied frame, that is an honest
-  typed failure → "pick another candidate," NOT a residual.
-  GENBA gates as usual next tick: clean tree, only loop-authored commits since last_green_sha d58f94f, re-hash plan
-  (955c27e3…), baseline 103 non-solver + 5 @solver green. Clear human_gate=false ONLY once Sam has supplied/approved
-  a frame and you are actively doing the Sprint-1 BUILD.
-  NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load appears ONLY in score.py;
-  solve_pointing/detect_streak/measure_position never read truth and never take a header WCS; the solver ALWAYS
-  gets a WCS-stripped image; the NEW ingest writer is covered by the EXTENDED seal tests; when extending the
-  "json.load only in score.py" test, match the AST json.load/json.loads attribute-call token SPECIFICALLY, NOT a
-  bare `load` substring (else it false-positives on skyfield load.timescale() at render.py:138 + astropy reads) —
-  do NOT weaken the seal to make a bad test pass. (b) NON-CIRCULARITY — header WCS is pointing-truth, read ONLY by
-  ingest + the report diagnostic, passed IN-MEMORY (never json.load outside score.py); satellite-truth = the TLE
-  propagated via skyfield TOPOCENTRIC (observatory site honored — mandatory for LEO parallax) to the exposure
-  midpoint -> truth.json["scored_truth"], read by score._load_truth UNCHANGED; NEVER feed the header WCS into the
-  solver. (c) HONEST TYPED FAILURE — SolveFailure/DetectFailure -> exit 2/3 + labelled msg + NO residual.txt; a
-  wrong-field lock failing the AC-4.6 plausibility gate (recovered WCS center vs header WCS center <= 0.5 x fov_deg)
-  is ALSO an honest typed failure, not a flattering residual; a NUMERIC residual PASSING AC-4.6 is REQUIRED before
-  tagging v0.1.1 (a typed failure means "pick another frame," not "done"). (d) REUSE — factor & reuse render's
-  _propagate_satellite + clean-FITS write as BEHAVIOR-PRESERVING extractions (render's tests + golden e2e stay
-  green); reuse solve/detect/score verbatim. (e) YAGNI — no non-FITS ingest, no streak-vs-catalogue matcher
-  (PHASE 2, scoped-only). (f) ALL review LOCAL/FREE (/code-review ultra BANNED for tracklet); NEVER auto-push
-  (v0.1.1 is LOCAL only); NEVER write a handoff file. Carry the 2 M1 watch-items (open_findings note above).
-human_gate: true  # ⛔ tick 19 — RAISED at the M1 Sprint-1 human andon gate (frame acquisition blocked; identity could not be externally established without building a PHASE-2 correlator). Waiting for Sam to supply/approve a real frame + its externally-established NORAD id + provenance. See needs_human + the tick-19 decisions triples for the full sourcing landscape + blockers. Clear ONLY when actively running the Sprint-1 BUILD on a Sam-confirmed frame.
+  ✅ AC-1.5 HUMAN GATE CLEARED (this turn) — Sam CONFIRMED the M1 frame + the strict-AC-4.6 approach. Sprints 1→6
+  now run AUTONOMOUSLY frame-in-hand (no further human gate EXCEPT the TLE watch-item below — Andon if it blocks).
+
+  >>> LOCKED M1 FRAME (gate-ready; AC 1.2 blind-solve + AC 1.3 detect PROVEN on the real frame):
+  - Frame: BW3_DDOTI_data/20221118/20221118T024706C1o.fits.fz (DDOTI camera C1, OAN-SPM San Pedro Mártir, 10 s).
+    Rice-compressed .fits.fz → `funpack` to plain FITS for solve/detect/ingest.
+  - Source: Zenodo record 8102655 (DOI 10.5281/zenodo.8102655, "Raw FITS … BlueWalker 3", CC-BY-4.0). Archive
+    BW3_DDOTI_data.tgz (2,399,378,573 B) at https://zenodo.org/api/records/8102655/files/BW3_DDOTI_data.tgz/content;
+    member size 17,507,520 B, member SHA-256 b6dcf797163fab78adca9316f0dcb18eb29e83c8c398ae325a292fad30519ca1.
+    fetch.sh MUST stream + `tar --include` ONLY this member (NEVER land the 2.4 GB on disk — disk-Andon Kaizen) →
+    funpack. gitignore the .fits.fz binary (fetch on demand); commit fetch.sh + PROVENANCE.md + the TLE.
+  - DATE-OBS=2022-11-18T02:47:16.782 UTC, EXPTIME=10.0 s (MJD-OBS 59901.11616647).
+  - NORAD 53807 = BlueWalker-3. Identity EXTERNAL via the DATASET (header BLKNM='BW3'/VSTNM='BW3' + Zenodo title) —
+    carry from the dataset, NOT a correlator, NOT an OBJECT keyword.
+  - Observatory: OAN-SPM / DDOTI (San Pedro Mártir, MX) ≈ +31.0442 N, −115.4633 W, ~2790 m — CONFIRM the exact DDOTI
+    station geodetic coords in the build before pinning (needed for the topocentric satellite-truth).
+  - Plate scale ~2.0"/px, FOV 3.41° (6144×6220). Blind-solves on the EXISTING 4100 indexes (NO new indexes, NO
+    astrometry.cfg edit). Smoke PROVEN: AC 1.2 solve_pointing → SolveResult 8.3 s, recovered center (305.557,
+    −14.964); AC 1.3 detect_streak → real 4956 px trail @126.2° (adversarial false-lock guard held; star-only
+    siblings → honest DetectFailure). License CC-BY-4.0 (attribute the BW3 DDOTI dataset authors).
+
+  >>> NO-HEADER-WCS ADAPTATION (Sam-approved "keep AC-4.6 STRICT"). DDOTI frames carry NO header WCS (0/132) — only
+  the mount commanded pointing STRCURA=303.6068°, STRCUDE=−16.2040°. So the plan's "header-WCS pointing-truth" is
+  REPLACED everywhere it was used (AC-4.6 plausibility gate AND the report's pointing-vs-timing diagnostic) by
+  POINTING-TRUTH = commanded pointing (STRCURA/STRCUDE) + a FIXED C1 camera offset. The C1 offset is NOT publicly
+  documented (DDOTI papers give only the 6.8°×10.2° footprint envelope; the real offset is diagonal +1.88°E/+1.24°N
+  ≈2.25°, implying an undocumented grid rotation → a doc-based strict gate would false-fail). DERIVE the fixed C1
+  offset EMPIRICALLY + NON-CIRCULARLY: blind-solve ≥3 OTHER C1 frames from the SAME archive (different times/nights),
+  compute offset_i = (recovered_center_i − that frame's STRCURA/STRCUDE), CONFIRM cross-frame consistency (scatter
+  <~0.1°; the adapter is mechanically rigid — high scatter ⇒ Andon), take the mean as the fixed C1 offset. Then for
+  the GATE frame: expected_C1_center = its STRCURA/STRCUDE + mean_offset; AC-4.6 STRICT = |recovered_center −
+  expected_C1_center| ≤ 0.5×fov_deg (1.7°). Non-circular (offset from OTHER frames), strict, still catches a gross
+  wrong-field lock. Do NOT use this frame's own (recovered − commanded) as the reference — circular (trivial self-match).
+
+  >>> TLE WATCH-ITEM (the one real remaining dependency — Andon to Sam if blocked): the residual needs a HISTORICAL
+  BlueWalker-3 (NORAD 53807) TLE bracketing 2022-11-18T02:47:16 UTC (MJD 59901.116). Try public sources first
+  (CelesTrak GP history; public TLE archives / SatNOGS). Space-Track.org has the full history but needs a FREE login
+  Sam may have to supply. If no historical TLE is obtainable without credentials → ANDON, surface to Sam; do NOT
+  fabricate a TLE or silently use a far-epoch current TLE. Record the actual TLE epoch + source into PROVENANCE.md.
+
+  >>> BUILD SEQUENCE (plan plan-the-m1-real-image-snappy-bunny.md, now frame-in-hand): S1 = fixtures/real/ +
+  fetch.sh + PROVENANCE.md (AC 1.5 sign-off recorded) + commit TLE + smoke (make test green); S2 = ingest
+  (.fits.fz→funpack→2-D float32, WCS-stripped image.fits + truth.json; EXTEND the seal over ingest; AC 2.5 = the
+  NORMALIZED image still solves+detects — BINDING; if it fails, REJECT the frame→back to S1); S3 = real-truth
+  (pointing-truth = commanded+empirical-C1-offset; satellite-truth = BW3 TLE → skyfield TOPOCENTRIC at exposure
+  midpoint → truth.json scored_truth; reuse render._propagate_satellite as a behavior-preserving extraction —
+  render tests + golden e2e stay green); S4 = run.py --image/--meta + AC-4.6 STRICT (above); S5 = honest
+  degradation report (real residual_arcsec always; 5 named sources; pointing-vs-timing decomp using commanded+offset,
+  no json.load outside score.py); S6 = numeric residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL. GENBA each tick:
+  clean tree, only loop-authored commits since last_green, re-hash plan 955c27e3, baseline 103+5 green.
+
+  NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load ONLY in score.py; solve/detect/
+  measure never read truth, never take a header WCS; the solver ALWAYS gets a WCS-stripped image; the NEW ingest
+  writer is covered by EXTENDED seal tests; match the AST json.load/json.loads token SPECIFICALLY (NOT a bare `load`
+  substring → false-positives on skyfield load.timescale() at render.py:138 + astropy reads); do NOT weaken the seal
+  to pass a bad test. (b) NON-CIRCULARITY — pointing-truth (commanded+offset) read ONLY by ingest + the report
+  diagnostic, IN-MEMORY (never json.load outside score.py); satellite-truth via score._load_truth UNCHANGED; NEVER
+  feed any pointing prior into the blind solve (it gets ONLY a WCS-stripped image + a coarse fov_deg scale hint).
+  (c) HONEST TYPED FAILURE — SolveFailure/DetectFailure → exit 2/3 + labelled msg + NO residual.txt; a wrong-field
+  lock failing AC-4.6 is an honest typed failure, not a flattering residual; a NUMERIC residual PASSING AC-4.6 is
+  REQUIRED before tagging v0.1.1. (d) REUSE render's _propagate_satellite + clean-FITS write as behavior-preserving
+  extractions (render tests + golden e2e stay green); reuse solve/detect/score verbatim. (e) YAGNI — no non-FITS
+  ingest beyond the funpack this frame needs, no streak-vs-catalogue matcher (PHASE 2, scoped-only). (f) ALL review
+  LOCAL/FREE (/code-review ultra BANNED); NEVER auto-push (v0.1.1 LOCAL only); NEVER write a handoff file. Carry the
+  2 M1 watch-items (open_findings note above).
+human_gate: false  # CLEARED this turn — Sam CONFIRMED the M1 frame (BlueWalker-3 DDOTI 20221118T024706C1o, NORAD 53807) + the strict-AC-4.6 approach at the AC-1.5 gate. The Sprint-1 BUILD proceeds frame-in-hand. (The TLE watch-item in next_action may raise a NEW human_gate if a historical NORAD-53807 TLE can't be obtained without Space-Track credentials.)
 tick_lock: null  # cleared at tick-19 end (the BUILD work halted at acquisition; no live build in progress)
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
