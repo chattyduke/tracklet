@@ -1,6 +1,8 @@
 # tracklet — generated / environment artifacts (never committed)
 .venv/
 out/
+# the M1 real-image run output dir (README documents `--out out_real`); generated, never committed
+out_real/
 indexes/
 astap/
 *.fits
