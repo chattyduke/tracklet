@@ -53,31 +53,19 @@ def test_ac25_normalized_real_image_blind_solves_and_detects():
         )
 
 
-_offset_missing = "camera_offset_ra_deg" not in tomllib.loads(_META.read_text()).get("pointing", {})
-
-
 @pytest.mark.solver
 @pytest.mark.skipif(_frame_missing, reason=_skip_reason)
-@pytest.mark.xfail(
-    _offset_missing,
-    reason=(
-        "AC 4.1 numeric residual awaits the NON-CIRCULAR C1 camera offset: meta has no "
-        "camera_offset_ra/dec_deg yet, so the gate correctly reports the wrong-field typed failure "
-        "(recovered C1 field is ~2.25 deg from commanded mount pointing > 1.705 deg half-field). "
-        "The offset is derived next tick by blind-solving >=3 OTHER same-night C1 frames "
-        "(024735/024757/024816, fetch streaming) and committed to meta; this test then passes."
-    ),
-    strict=True,
-    raises=AssertionError,
-)
 def test_ac41_real_image_run_produces_numeric_residual_passing_plausibility(tmp_path, capsys):
     """AC 4.1 + AC 6.1: run.py --image/--meta on the locked frame produces a NUMERIC residual that
     PASSES the AC-4.6 plausibility gate (recovered field overlaps the expected pointing field).
 
-    Requires the camera offset to be present in meta (derived non-circularly from OTHER C1 frames);
-    without it the expected center is commanded-only and the run honestly reports a wrong-field typed
-    failure (separation ~2.25 deg > 1.705 deg). So this test is the milestone numeric-residual gate and
-    only passes once the non-circular offset is committed (then xfail flips off automatically).
+    The NON-CIRCULAR C1 camera offset is committed in meta (camera_offset_ra/dec_deg, derived in
+    tick 25 by blind-solving 3 OTHER same-night C1 frames — 024735/024757/024816 — and taking
+    mean(recovered - commanded), scatter 0.0001 deg). With it the expected pointing center =
+    commanded + offset = (305.5563, -14.9639), which the target frame's own blind-recovered center
+    (305.5565, -14.9640) overlaps to 0.0002 deg << the 1.705 deg half-field tolerance — so the gate
+    confirms field overlap and the run emits the milestone numeric residual (~315.5", dominated by the
+    documented 0.598-day TLE-age along-track term — an honest real-frame number, NOT a synthetic gate pass).
     """
     import math
 
