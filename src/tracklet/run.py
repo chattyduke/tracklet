@@ -207,9 +207,26 @@ def _run_real(args, out_dir: Path) -> int:
         f"(threshold {result.threshold_arcsec}\") -> {verdict}"
     )
     _write_real_report(
-        out_dir, result, meta, rec_ra, rec_dec, expected, plausible, detection
+        out_dir, result, meta, rec_ra, rec_dec, expected, plausible, detection, tle, rt
     )
     return 0
+
+
+def _tle_age_days(tle, exposure_mid_utc) -> float:
+    """Age of the TLE epoch relative to the exposure midpoint, in days (>= 0 when the epoch precedes
+    the exposure). Decodes the standard TLE epoch field (line 1, cols 19-32: ``YYDDD.DDDDDDDD``) into a
+    UTC datetime and subtracts — metadata extraction, not a propagation (skyfield does the propagation).
+    Returns 0.0 if the midpoint is unavailable (e.g. a stubbed truth in a non-frame test)."""
+    import datetime as _dt
+
+    if exposure_mid_utc is None:
+        return 0.0
+    field = tle.line1[18:32]
+    yy = int(field[0:2])
+    doy = float(field[2:])
+    year = 2000 + yy if yy < 57 else 1900 + yy  # standard TLE 2-digit-year pivot
+    epoch = _dt.datetime(year, 1, 1, tzinfo=_dt.timezone.utc) + _dt.timedelta(days=doy - 1.0)
+    return (exposure_mid_utc - epoch).total_seconds() / 86400.0
 
 
 def _expected_pointing_center(meta: dict) -> "tuple[float, float]":
@@ -224,38 +241,55 @@ def _expected_pointing_center(meta: dict) -> "tuple[float, float]":
     return ra, dec
 
 
-def _write_real_report(out_dir, result, meta, rec_ra, rec_dec, expected, plausible, detection) -> None:
-    """A minimal honest real-frame report (Sprint 4). The full five-source degradation report is
-    Sprint 5 — this records the headline residual + the plausibility-gate result + provenance, so a
-    successful real run leaves a human-readable artifact alongside residual.txt (AC 4.1)."""
+def _write_real_report(
+    out_dir, result, meta, rec_ra, rec_dec, expected, plausible, detection, tle, rt
+) -> None:
+    """The honest M1 real-frame report (Sprint 5): the headline residual + the AC-4.6 plausibility-gate
+    result + the FIVE-source degradation report with the TLE-age along-track term flagged DOMINANT + a
+    pointing-vs-timing decomposition computed from the IN-MEMORY measured/truth SkyCoords (score stays
+    the sole truth deserializer). The degradation section is rendered by ``report.render_degradation_report``;
+    here we add the plausibility-gate provenance the gate produced this run."""
+    from tracklet.report import DegradationInputs, render_degradation_report
+
     sat = meta.get("satellite", {})
     obs = meta.get("observatory", {})
-    verdict = "PASS" if result.passed else "FAIL"
-    lines = [
-        "# tracklet — real-image run (M1)",
-        "",
-        "## Result",
-        f"- **Residual: {result.residual_arcsec:.4f}\"** (threshold {result.threshold_arcsec}\") "
-        f"-> **{verdict}**",
-        "",
-        "## Plausibility gate (AC 4.6 — anti wrong-field-lock)",
-        f"- Recovered field center: RA {rec_ra:.4f}, Dec {rec_dec:.4f} deg",
-        f"- Expected pointing center: RA {expected[0]:.4f}, Dec {expected[1]:.4f} deg",
-        f"- Separation {plausible.separation_deg:.4f} deg <= tolerance "
-        f"{plausible.tolerance_deg:.4f} deg (0.5 x fov) -> field overlap CONFIRMED",
-        "",
-        "## Provenance",
-        f"- Satellite: {sat.get('name', '?')} (NORAD {sat.get('norad_id', '?')})",
-        f"- Observatory: {obs.get('name', '?')}",
-        f"- Detected trail: {detection.length_px:.0f} px @ {detection.angle_deg:.2f} deg",
-        "",
-        "## What this proves",
-        "- A GENUINE telescope frame was blind plate-solved (no position prior) and its real satellite "
-        "trail measured to the residual above against independently sealed TLE-propagated truth.",
-        "- The full degradation budget (atmosphere/PSF/timing/plate-scale/noise) is the Sprint-5 report.",
-        "",
-    ]
-    (Path(out_dir) / "report.md").write_text("\n".join(lines))
+
+    degradation_md = render_degradation_report(
+        DegradationInputs(
+            score=result,
+            detection=detection,
+            tle_age_days=_tle_age_days(tle, rt.exposure_mid_utc),
+            exposure_s=float(meta["timing"]["exptime_s"]),
+            norad_id=sat.get("norad_id"),
+            satellite_name=sat.get("name", "?"),
+            # The header WCS (pointing-truth) is carried in-memory on the truth result when present;
+            # None for DDOTI. Passed in-memory — NEVER deserialized here, NEVER fed into the blind solve.
+            pointing_truth=rt.pointing_wcs,
+        )
+    )
+
+    gate_md = "\n".join(
+        [
+            "",
+            "## Plausibility gate (AC 4.6 — anti wrong-field-lock)",
+            f"- Recovered field center: RA {rec_ra:.4f}, Dec {rec_dec:.4f} deg",
+            f"- Expected pointing center: RA {expected[0]:.4f}, Dec {expected[1]:.4f} deg "
+            "(commanded mount pointing + non-circular C1 camera offset)",
+            f"- Separation {plausible.separation_deg:.4f} deg <= tolerance "
+            f"{plausible.tolerance_deg:.4f} deg (0.5 x fov) -> field overlap CONFIRMED",
+            "",
+            "## Provenance",
+            f"- Observatory: {obs.get('name', '?')}",
+            f"- Plate solver: astrometry.net solve-field (blind — no position seed)",
+            "",
+            "## What this proves",
+            "- A GENUINE telescope frame was blind plate-solved (no position prior) and its real "
+            "satellite trail measured to the residual above against independently sealed "
+            "TLE-propagated truth — an honest, plausibility-gated, non-circular real-image result.",
+            "",
+        ]
+    )
+    (Path(out_dir) / "report.md").write_text(degradation_md + gate_md)
 
 
 if __name__ == "__main__":
