@@ -2,31 +2,42 @@
 current_milestone: M1
 current_increment: "M1 Sprint 1 — acquire + smoke-verify + LOCK ONE real public-archive FITS (header WCS + precise UTC + externally-established NORAD id); HUMAN ANDON GATE before Sprint 2 (plan plan-the-m1-real-image-snappy-bunny.md, target tag v0.1.1)"
 last_increment_id: "S7 seal tests + golden e2e + README/docs — M0 COMPLETE, tagged v0.1.0"
-phase: PLAN
-status: PLAN_LOCKED_AWAITING_BUILD
+phase: BUILD  # tick 19 BUILD tick HALTED at the M1 Sprint-1 human andon gate during ACQUISITION — see needs_human / decisions log. No product code written (Sprint 1 adds only fixtures+provenance, which require a confirmed frame first). The Sprint-1 BUILD resumes the moment Sam supplies/approves a frame+NORAD id (the engine's planned Sprint-1 hard stop is acquisition+human-confirm).
+status: PLAN_LOCKED_AWAITING_BUILD  # UNCHANGED: Sprint 1 is NOT complete — it is blocked at frame acquisition. The next tick still owes the Sprint-1 BUILD (write fixtures/provenance + smoke + AC 1.5 sign-off) once a frame is in hand.
 last_green_sha: d58f94f854d101cec414eb037866d07257c53293
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 103, failed: 0, note: 'S7 added 8 seal tests (static x6 = 2 checks x 3 solving modules, runtime x1, clean-FITS x1); all 3 pillars mutation-verified RED then restored. Green WITHOUT the solver (AC 7.5). Run via `make test`.'}
   - {cmd: 'pytest -m solver', passed: 5, failed: 0, note: 'S3 x2 + S6 x2 + S7 golden-e2e x1. Golden e2e (THE DoD gate) blind-solve residual = 2.081" (< 10" gate; expected ~2-4"; < 5" stretch), actual number always reported via capsys.disabled(). Independently re-rendered+re-solved in REVIEW. Run via `make test-golden`.'}
 plan_file: ~/.claude/plans/plan-the-m1-real-image-snappy-bunny.md
 plan_sha256: 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed
-no_progress_count: 0
+no_progress_count: 1  # tick 19: a BUILD tick that produced NO green merge (acquisition blocked at the human gate) → honest increment 0→1 per §3.3. NOTE: this is a PLANNED human-andon halt (the Sprint-1 gate the plan + operator brief mandate), NOT an engineering spin-failure — but the counter is mechanical so it ticks. ⚠️ The NEXT build tick that again fails to merge green would reach no_progress_count=2 → the §4-#5 hard human gate. The intended resolution is NOT another autonomous acquisition attempt (the blocker is external — a sourceable frame, see needs_human) but Sam supplying/approving a frame so the Sprint-1 BUILD can complete and merge green (which resets to 0). Do NOT auto-retry web-sourcing on the next tick without new information; that would burn toward the spin gate without progress.
 open_findings: []  # M1 starts clean (M0 closed at tick 17, ACCEPT). CARRIED M1 watch-items (NOT blocking; only bite once a REAL frame is processed): (1) detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol -> midpoint bias (S4 review) — watch midpoint robustness on the real frame; (2) [benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT).
 next_action: >-
-  M1 plan LOCKED this tick (tick 18, FRESH planning tick): plan_file repointed to
-  plan-the-m1-real-image-snappy-bunny.md (SHA 955c27e3…); config.approved_plan_path repointed to match. Per §3.2
-  this FRESH tick HARD-STOPS at the plan lock — the Sprint-1 BUILD is the NEXT tick (run a fresh /autobuild-loop
-  session on ~/tracklet; the engine reconstructs state from this file at the top of GENBA).
-  ⚠️ SPRINT 1 CARRIES THE M1 HUMAN ANDON GATE — the ONE hard stop. The build tick: source ONE public-archive FITS
-  (header WCS + precise UTC DATE-OBS/EXPTIME + a satellite trail whose NORAD id is EXTERNALLY established; priority
-  NOIRLab Astro Data Archive -> ZTF/IRSA -> SDSS); smoke-verify it blind-SOLVES + DETECTS on the RAW candidate
-  (AC 1.2/1.3, reuse solve_pointing/detect_streak verbatim); write tests/fixtures/real/PROVENANCE.md + a fetch.sh
-  (pinned SHA256, TWO urls: primary + mirror) + commit the TLE; THEN raise human_gate=true and HALT — Sam must
-  confirm the exact frame + NORAD id + provenance (AC 1.5) before Sprint 2. The Sprint-1 lock is PROVISIONAL:
-  Sprint 2's AC 2.5 (the NORMALIZED / WCS-stripped image still blind-solves + detects) is the BINDING confirmation;
-  if AC 2.5 fails, REJECT the frame and return to Sprint 1 for the next candidate.
-  GENBA gates as usual: clean tree, only loop-authored commits since last_green_sha d58f94f, re-hash plan
-  (955c27e3…), baseline 103 non-solver + 5 @solver green.
+  ⛔ HUMAN ANDON GATE RAISED (tick 19, BUILD tick) — the Sprint-1 frame-acquisition hard stop the plan + operator
+  brief mandate. The loop did a genuine, time-boxed sourcing effort and could NOT confidently source ONE real
+  public FITS frame that satisfies ALL of AC 1.1–1.4 simultaneously: (header WCS) + (precise UTC DATE-OBS/EXPTIME)
+  + (a satellite trail whose NORAD id is EXTERNALLY established — published/cataloged by someone else, NOT
+  recovered by us; building a TLE→streak correlator is PHASE 2, explicitly out of scope). Per the plan's explicit
+  time-box rule ("if you cannot confidently source a frame … STOP and return needs_human … NEVER fabricate an
+  identity or a residual"), the loop HALTED rather than fabricate identity. NO product code was written; the
+  feat/m1-s1-real-frame branch was cut then deleted clean (0 commits); tree clean on main.
+  >>> RESUMPTION CONTRACT (the NEXT build tick, once Sam supplies/approves a frame): do NOT re-run an open-ended
+  web search (the blocker is external — see needs_human + the sourcing landscape in the tick-19 decisions log;
+  another blind autonomous attempt with no new info would burn toward the §4-#5 spin gate at no_progress_count=2).
+  Instead, with Sam's confirmed frame in hand: (1) fetch/commit it per AC 1.1 (DEFAULT fetch.sh w/ pinned SHA256 +
+  TWO urls primary+mirror; inline-commit only if ≤~5 MB AND license permits); (2) smoke-verify it blind-SOLVES
+  (solve_pointing(<raw>, {"fov_deg": <hint>}) → SolveResult not SolveFailure, AC 1.2) AND DETECTS
+  (detect_streak(<raw>) → StreakDetection not DetectFailure, AC 1.3), reusing both VERBATIM — solve-field solves
+  blind by default even with a header WCS present; (3) write tests/fixtures/real/PROVENANCE.md (source URL, exact
+  retrieval steps, DATE-OBS/EXPTIME, NORAD id + TLE epoch + TLE source, observatory site, header-WCS presence) +
+  commit the TLE; (4) record AC 1.5 human sign-off in PROVENANCE.md; (5) confirm `make test` still green (only
+  docs/fixtures added). THEN the Sprint-1 lock is PROVISIONAL — Sprint 2's AC 2.5 (the NORMALIZED / WCS-stripped
+  image still blind-solves + detects) is the BINDING confirmation; if AC 2.5 fails, REJECT the frame and return to
+  Sprint 1 for the next candidate. If the smoke FAILS to solve/detect on the supplied frame, that is an honest
+  typed failure → "pick another candidate," NOT a residual.
+  GENBA gates as usual next tick: clean tree, only loop-authored commits since last_green_sha d58f94f, re-hash plan
+  (955c27e3…), baseline 103 non-solver + 5 @solver green. Clear human_gate=false ONLY once Sam has supplied/approved
+  a frame and you are actively doing the Sprint-1 BUILD.
   NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load appears ONLY in score.py;
   solve_pointing/detect_streak/measure_position never read truth and never take a header WCS; the solver ALWAYS
   gets a WCS-stripped image; the NEW ingest writer is covered by the EXTENDED seal tests; when extending the
@@ -44,8 +55,8 @@ next_action: >-
   green); reuse solve/detect/score verbatim. (e) YAGNI — no non-FITS ingest, no streak-vs-catalogue matcher
   (PHASE 2, scoped-only). (f) ALL review LOCAL/FREE (/code-review ultra BANNED for tracklet); NEVER auto-push
   (v0.1.1 is LOCAL only); NEVER write a handoff file. Carry the 2 M1 watch-items (open_findings note above).
-human_gate: false
-tick_lock: null
+human_gate: true  # ⛔ tick 19 — RAISED at the M1 Sprint-1 human andon gate (frame acquisition blocked; identity could not be externally established without building a PHASE-2 correlator). Waiting for Sam to supply/approve a real frame + its externally-established NORAD id + provenance. See needs_human + the tick-19 decisions triples for the full sourcing landscape + blockers. Clear ONLY when actively running the Sprint-1 BUILD on a Sam-confirmed frame.
+tick_lock: null  # cleared at tick-19 end (the BUILD work halted at acquisition; no live build in progress)
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
@@ -605,4 +616,47 @@ JUDGE: N/A — trivial design brief (Sprint 1 fully specified; no design fork). 
 (a) re-invents nothing (reuses solve_pointing/detect_streak verbatim as a smoke); (b) sealed-truth untouched (no
 module built; the smoke runs the blind path on the raw frame); (c) shatters no signed contract (no module
 changed); (d) scope == Sprint 1 verbatim.
+```
+
+- [tick 19 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for M1 Sprint 1 (the human-andon-gated acquisition increment); verify §3.5 gates + no live-session collision + the GREEN baseline before any build, and re-ground both reuse points (solve_pointing/detect_streak signatures). → Action(Read state IN FULL + config + the M1 plan IN FULL; git status --porcelain + HEAD + branches + tags + commits since d58f94f; shasum the M1 plan; list_sessions isRunning check; `make test` + `make test-golden` via repo .venv; grep solve_pointing/detect_streak + the typed-result classes) → Observation: clean tree on main @ 1f4d93a; only 2 loop-authored chore commits since d58f94f (tick-17 + tick-18 plan-lock), no foreign branch, only `main` + tag v0.1.0; plan re-hash = 955c27e35f9e… MATCHES recorded (plan NOT stale); NO live tracklet build loop (the 2 isRunning sessions are space-research chats; all Tracklet-* build sessions stopped; tick_lock null); baseline GREEN 103 non-solver + 5 @solver (golden e2e blind residual 2.081"); no_progress_count 0. Reuse points confirmed verbatim: solve_pointing(image_path, scale_hint) @ solve_pointing.py:111, detect_streak(image_path) @ detect_streak.py:248; SolveResult/SolveFailure + StreakDetection/DetectFailure present. Cut feat/m1-s1-real-frame. ALL §3.5 gates pass → line clear to build.
+- [tick 19 | BUILD/ACQUISITION] Thought: Sprint 1's load-bearing first step is SOURCING ONE real public-archive FITS whose trailing satellite's NORAD id is EXTERNALLY established (published/cataloged) — NOT recovered by us (a TLE→streak correlator is PHASE 2, explicitly out of scope per the plan). Genuine, time-boxed search across the priority archives + the strongest labeled-dataset candidates. → Action(WebSearch + WebFetch over: NOIRLab/ZTF-IRSA/SDSS satellite-streak literature; HST/ACS Nature-Astronomy trail catalogue; ZTF Starlink-impact paper arXiv 2201.05343; the StreakMind A&A 2026 dataset arXiv 2605.03429; the Frigate LEO-FITS dataset PMC12717252 / figshare 10.6084/m9.figshare.29545667; the Mephisto multi-band DL paper arXiv 2509.04081 + 2509.16771) → Observation: a STRUCTURAL blocker, consistent across every candidate — datasets that PUBLISH the FITS do NOT carry per-frame externally-established NORAD identity, and papers that IDENTIFY NORAD ids do NOT release a single retrievable public FITS exposure tied to that id with a usable header WCS + DATE-OBS. Specifics: (i) HST/ACS Nature-Astronomy trails (j8cw52p3q, jcor25dtq…) are labeled "trail present" by citizen science, NOT correlated to a NORAD object → fails AC 1.4; (ii) ZTF Starlink-impact papers give methodology + aggregate matches (300" co-linearity gate) but name NO single retrievable frame+NORAD pair → fails AC 1.1/1.4; (iii) StreakMind: FITS NOT public + identifies via Project-Pluto Sat_ID codes (not NORAD) AND the matching IS the correlator the plan bans (PHASE 2); (iv) Frigate: openly downloadable real LEO FITS w/ ms-precise DATE-OBS + 0.5s EXPTIME + CC-BY-4.0, BUT NO plate solution (no header WCS) + only bounding boxes (no NORAD identity) → fails AC 1.2 + AC 1.4; (v) Mephisto DL papers: FITS not released, NORAD ids illustrative not per-frame. Establishing identity myself by TLE-propagating to a candidate frame + matching the streak = exactly the PHASE-2 correlator the plan forbids in PHASE 1. Per the plan's explicit time-box rule, STOP rather than fabricate an identity or a residual.
+- [tick 19 | ANDON] Thought: this is the §4 / Sprint-1 HUMAN ANDON GATE firing for real — the ONE hard stop M1 was designed around. The honest, doctrine-correct move is to HALT and hand Sam the candidate landscape + the precise external blocker, NOT to weaken AC 1.4 / build a correlator / fabricate. → Action(checkout main; delete feat/m1-s1-real-frame [0 commits — clean, no inventory-muda]; set human_gate=true, phase BUILD, no_progress_count 0→1 [honest: a build tick with no green merge, §3.3]; write the resumption contract + needs_human; status STAYS PLAN_LOCKED_AWAITING_BUILD [Sprint 1 is blocked at acquisition, not done]) → Observation: tree clean on main; human gate raised; loop bookkeeping committed on main; awaiting Sam's frame+NORAD+provenance. NO product code, NO module touched, sealed-truth + every signed contract preserved by construction.
+- [tick 19 | HANSEI] What worked: the plan's time-box + "never fabricate an identity or a residual" rule did EXACTLY its job — it stopped the loop from the seductive wrong move (propagate a TLE to a likely frame, "establish" identity myself, and report a flattering residual), which would have silently imported the PHASE-2 correlator and destroyed the milestone's whole honesty claim. The genchi-genbutsu on each candidate (actually checking Frigate's headers = no WCS; StreakMind = Project-Pluto codes + non-public FITS; HST = citizen-science labels not orbital correlation) prevented committing to a frame that fails a gate only discovered later. Genuine finding (the real muda surfaced): there is a STRUCTURAL gap in the public-data ecosystem — "FITS + header WCS + precise UTC + externally-established NORAD identity, all four in one downloadable frame" is rare precisely because identity-correlation is itself hard work most publishers don't ship. This is exactly why the plan put a HUMAN gate here. KAIZEN for the resumption tick: do NOT blindly re-run the same open-ended web search (no new info → no progress → burns toward the §4-#5 spin gate at no_progress_count=2); the unblock is EXTERNAL (Sam supplies/approves a frame, or names a channel — e.g. an SSA contact, a specific NOIRLab program he knows carries trail+ID, a Space-Track-correlated observation, or an amateur tracker who imaged a NAMED LEO object and published the FITS). Candidate strategies to put to Sam are in needs_human. Anti-spin: this build tick did not merge green → no_progress 0→1 (mechanical); the PLANNED human gate is the intended terminus of this tick, not a spin-failure, but the next no-merge tick WOULD hit the hard gate — so resumption must be frame-in-hand, not another blind attempt. Per §3.2 + the operator brief: this BUILD tick ENDS here at the human andon gate; Sprint 2 does NOT begin.
+
+### acquisition sourcing landscape (tick 19 — for Sam's gate decision)
+
+```
+GOAL (AC 1.1–1.4, ALL FOUR in ONE downloadable frame):
+  - real public-archive FITS, retrievable byte-identically (inline-commit OR fetch.sh + pinned SHA256)
+  - header WCS present (the survey's OWN plate solution = independent pointing-truth; read only by ingest+report)
+  - precise UTC: DATE-OBS (exposure START, UTC) + EXPTIME
+  - a satellite trail whose NORAD id is EXTERNALLY established (published/cataloged by a THIRD PARTY) +
+    a TLE with epoch within sane range of DATE-OBS + a known observatory site (topocentric, for LEO parallax)
+
+WHY IT'S HARD (the structural blocker found this tick): the four properties are split across two
+disjoint corpora — (A) datasets that publish FITS (Frigate, ZTF cutouts, StreakMind source) ship NO
+per-frame externally-established NORAD identity (and Frigate has no WCS); (B) papers/pipelines that
+establish NORAD identity (ZTF-Starlink, StreakMind's Sat_ID matching, Mephisto DL) do NOT release a single
+retrievable public FITS tied to that id. Bridging them MYSELF (propagate a TLE to a candidate frame, match
+the streak) is the PHASE-2 correlator the plan forbids in PHASE 1.
+
+CANDIDATE STRATEGIES TO PUT TO SAM (ranked by how cleanly they satisfy all 4 + honesty):
+  1. A frame Sam already has / can get from an SSA or observatory contact where the object identity is
+     established by THAT source (e.g. a tasked tracking observation of a NAMED object) — cleanest: identity
+     is genuinely external, FITS+WCS+UTC come with it.
+  2. An amateur/pro astrophotographer who imaged a SPECIFIC, NAMED LEO object (e.g. a known Starlink pass,
+     the ISS, a named rocket body) and published the plate-solved FITS — identity is external (the imager
+     stated which object they targeted), provenance is the imager's log. Sam to point at a specific one.
+  3. A NOIRLab Astro Data Archive program Sam knows carries trail+ID metadata, or a Space-Track / IAU-CPS
+     SatHub case-study frame released WITH its correlated identity. (Generic NOIRLab search this tick did
+     not surface a per-frame ID; a Sam-known program/PI would.)
+  4. RELAX the source of identity (a plan/Sam decision, NOT a loop decision): accept a frame where WE
+     propagate a published TLE to confirm a NAMED candidate object lands on the streak — but this is the
+     PHASE-2 correlator and the plan explicitly bars it for PHASE 1. Only Sam can authorize moving that
+     line; the loop will NOT cross it autonomously.
+
+WHAT THE LOOP NEEDS FROM SAM TO RESUME (minimum): a frame (URL or file) + its DATE-OBS/EXPTIME + the
+externally-established NORAD id + how that identity was established (the external source) + the TLE
+(or where to fetch it) + the observatory site. With that, the next tick completes the Sprint-1 BUILD
+(fetch+commit, smoke solve+detect, PROVENANCE.md, AC 1.5 sign-off) and proceeds to the provisional lock.
 ```
