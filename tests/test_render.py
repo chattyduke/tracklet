@@ -274,6 +274,29 @@ def _propagate_iss_radec(scene, tle):
     return out
 
 
+def test_propagate_satellite_radec_pure_helper_matches_inline(scene, tle):
+    """The extracted pure single-instant helper produces the SAME ICRS RA/Dec as the inline
+    skyfield call render uses — proving the M1 Sprint-3 extraction is behavior-preserving and that
+    real satellite-truth (ingest path) shares render's exact ICRS frame.
+    """
+    import datetime as dt
+
+    from tracklet.render import propagate_satellite_radec
+
+    start = dt.datetime.fromisoformat(scene.utc.replace("Z", "+00:00"))
+    when = start + dt.timedelta(seconds=scene.exposure_s / 2.0)  # the exposure midpoint instant
+    ra, dec = propagate_satellite_radec(
+        tle,
+        scene.observer_lat_deg,
+        scene.observer_lon_deg,
+        scene.observer_elev_m,
+        when,
+    )
+    exp_ra, exp_dec = _propagate_iss_radec(scene, tle)["mid"]
+    assert ra == pytest.approx(exp_ra, abs=1e-9)
+    assert dec == pytest.approx(exp_dec, abs=1e-9)
+
+
 def test_streak_radec_matches_independent_propagation(scene, catalogue, tle, tmp_path):
     result = render_scene(scene, catalogue, tle, tmp_path)
     truth = json.loads(result.truth_path.read_text())

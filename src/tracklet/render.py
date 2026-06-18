@@ -127,27 +127,58 @@ def _exposure_times(scene) -> dict[str, dt.datetime]:
     }
 
 
-def _propagate_satellite(scene, tle) -> dict[str, tuple[float, float]]:
-    """Propagate the satellite to exposure start/mid/end -> ICRS RA/Dec (deg).
+def propagate_satellite_radec(
+    tle, lat_deg: float, lon_deg: float, elev_m: float, when_utc
+) -> tuple[float, float]:
+    """Propagate a satellite to ONE topocentric instant -> ICRS RA/Dec (deg).
 
-    Uses ``(sat - wgs84.latlon(observer)).at(t).radec()`` with NO epoch arg, which returns ICRS
-    astrometric RA/Dec — the SAME frame the blind solver's WCS reports, so truth and measured
-    share a frame (the non-circularity argument is airtight).
+    The single load-bearing primitive shared by render (synthetic path) and ingest's Sprint-3
+    real-truth assembly (M1). Uses ``(sat - wgs84.latlon(observer)).at(t).radec()`` with NO epoch
+    arg, which returns ICRS *astrometric* RA/Dec — the SAME frame the blind solver's recovered WCS
+    reports, so truth and the independently-measured recovery share a frame (the non-circularity
+    argument is airtight). The observer site is topocentric (mandatory for LEO parallax).
+
+    Parameters
+    ----------
+    tle : tracklet.scene.TLE
+        The two-line element set (``.line1``/``.line2``/``.name``).
+    lat_deg, lon_deg, elev_m : float
+        Observer geodetic latitude, longitude (deg), and elevation (m).
+    when_utc : datetime.datetime
+        A timezone-aware UTC instant (skyfield reads its tz).
+
+    Returns
+    -------
+    (ra_deg, dec_deg) : tuple[float, float]
+        ICRS astrometric RA/Dec in degrees.
     """
     from skyfield.api import EarthSatellite, load, wgs84
 
     ts = load.timescale()
     sat = EarthSatellite(tle.line1, tle.line2, tle.name or "SAT", ts)
-    obs = wgs84.latlon(
-        scene.observer_lat_deg, scene.observer_lon_deg, elevation_m=scene.observer_elev_m
-    )
+    obs = wgs84.latlon(lat_deg, lon_deg, elevation_m=elev_m)
+    t = ts.from_datetime(when_utc)
+    ra, dec, _ = (sat - obs).at(t).radec()
+    return (ra._degrees, dec.degrees)
+
+
+def _propagate_satellite(scene, tle) -> dict[str, tuple[float, float]]:
+    """Propagate the satellite to exposure start/mid/end -> ICRS RA/Dec (deg).
+
+    Thin loop over the shared pure ``propagate_satellite_radec`` primitive (one call per exposure
+    instant), so the synthetic and real-frame paths use the IDENTICAL ICRS topocentric propagation.
+    """
     times = _exposure_times(scene)
-    radec: dict[str, tuple[float, float]] = {}
-    for label, when in times.items():
-        t = ts.from_datetime(when)
-        ra, dec, _ = (sat - obs).at(t).radec()
-        radec[label] = (ra._degrees, dec.degrees)
-    return radec
+    return {
+        label: propagate_satellite_radec(
+            tle,
+            scene.observer_lat_deg,
+            scene.observer_lon_deg,
+            scene.observer_elev_m,
+            when,
+        )
+        for label, when in times.items()
+    }
 
 
 # ---------------------------------------------------------------------------
