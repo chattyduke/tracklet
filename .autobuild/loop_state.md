@@ -2,8 +2,8 @@
 current_milestone: M0
 current_increment: "S7 seal tests + golden e2e + README/docs -> M0 DoD + tag v0.1.0 (the FINAL M0 sprint — completes M0)"
 last_increment_id: "S6 report + run + ONE-command orchestrator (full pipeline, honest failure, solve_pointing hint fix)"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: 9b06df802a8ac795aba21ab13688fe15879be4ec
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 95, failed: 0, note: 'S6 added 13 tests (run 7 incl. stale-artifact hygiene + report 3 + solve_pointing malformed-hint 3). 2nd adversarial review ACCEPT_WITH_NOTES; MINOR+NIT fixed in-tick.'}
@@ -13,14 +13,14 @@ plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
 no_progress_count: 0
 open_findings: []  # S6 review @ tick 15 = ACCEPT_WITH_NOTES (no blocker/major). 1 MINOR (stale residual.txt survives a failed run) + 1 NIT (stale-case test) BOTH FIXED in-tick + mutation-verified RED. The S5 review MINOR (AC 5.3's 10" gate loose vs 1-px convention error) is now ACTIONABLE in S7 (the golden e2e is built there) — see post-S6-build note.
 next_action: >-
-  Run the S7 PLAN tick (status FRESH -> per §3.2 this opens GENBA -> RESEARCH -> IDEATE -> PLAN, HARD-STOP at the
-  plan-lock; the S7 BUILD is the tick AFTER). S7 is the FINAL M0 sprint — its DoD COMPLETES M0. GENBA: clean tree +
-  only loop-authored commits since last_green_sha 9b06df8, re-hash plan, baseline 95 non-solver + 4 solver green,
-  RE-READ the plan's Sprint 7 (lines 263-279) + the Verification + Risks sections (288-317). RESEARCH: likely SKIP
-  (docs + seal tests + a golden-e2e gate over already-built modules; no external unknown — but the README footprint
-  /uninstall/licence facts are real facts to state accurately, confirm them). IDEATE: a BRIEF brief — S7 is the
-  milestone-completing hardening sprint; pin the 3 seal tests + the @solver golden-e2e gate + the README honesty
-  contract. PLAN: JIT shortcut on Sprint 7 if fully covered; keep plan_sha256; set PLAN_LOCKED_AWAITING_BUILD.
+  S7 BUILD tick (status PLAN_LOCKED_AWAITING_BUILD -> per §3.2 this opens GENBA -> BUILD -> REVIEW ->
+  (INTEGRATE|FIX) -> HANSEI). RUN IN A FRESH /autobuild-loop SESSION — this plan-lock was driven as a one-off
+  proof tick (post-S8 runner migration); the BUILD is a separate fresh-context tick. S7 is the FINAL M0 sprint —
+  its DoD COMPLETES M0. GENBA: clean tree + only loop-authored commits since last_green_sha 9b06df8 (incl. the S8
+  migration 5e70012 + this plan-lock commit — both non-source), re-hash plan (d7237cdd…), baseline 95 non-solver +
+  4 @solver green, cut feat/S7. RE-READ the plan's Sprint 7 (lines 263-279) + Verification + Risks (288-317).
+  BUILD via TDD the S7 scope shape below; REVIEW = MANDATORY 2nd independent LOCAL review (S7 HIGH-RISK; cost
+  guard: local review only, /code-review ultra BANNED).
   S7 scope shape (confirm against plan Sprint 7): (1) tests/test_seal.py — STATIC (AST/source scan: the 3 solving
   modules solve_pointing/detect_streak/measure_position import no truth loader + never name the sealed artifact;
   much is already pinned per-module — consolidate + add any gap), RUNTIME (monkeypatch score._load_truth to RAISE
@@ -516,3 +516,38 @@ report.write_report / solve_pointing's SolveFailure-valid-return); (d) scope == 
 - [tick 15 | REVIEW-DISPOSITION] Thought: unlike tick 13's carry (a forward S7 design note), this MINOR is a real honesty-HYGIENE gap IN run.py on the HEADLINE artifact — and stranger-reproducibility (the M_final DoD) means someone will cat out/residual.txt and trust it. Fix is ~3 lines + a regression test (closes the NIT too). FIX in-tick (tick 11 precedent: fix cheap honesty-relevant defects before merge). → Action(add tests/test_run.py::test_failed_run_clears_stale_result_artifacts; confirm RED against current run.py (stale residual.txt survives); add run.main: unlink residual.txt/report.md/overlay.png at start before solve/detect; GREEN) → Observation: RED confirmed (stale file survived), fix GREEN. The EXISTING seal test test_run_does_not_open_truth_directly then FAILED because my fix comment literally contained "truth.json" -> reworded to "the sealed answer" (Poka-Yoke seal test earned its keep — caught a comment slip). 95 non-solver + 4 @solver green. Fix committed 24f0a8d. Every finding dispositioned (MINOR+NIT fixed + mutation-verified; the S5 MINOR carried to S7 where the golden e2e is built).
 - [tick 15 | INTEGRATE] Thought: gate passed (ACCEPT_WITH_NOTES + all dispositioned + both suites green) → integrate. → Action(git merge --no-ff feat/S6 -> main; pytest non-solver + solver; delete feat/S6) → Observation: merged @ 9b06df8; 95 non-solver + 4 @solver green on main; branch deleted. S6 ≠ a milestone (S7 closes M0) → no tag. no_progress_count stays 0 (green increment landed).
 - [tick 15 | HANSEI] What worked: the full pipeline now runs end-to-end via ONE command and produces a real, honest, independently-reproduced 2.08" blind-solve residual — the core product exists. The 2nd review for the headline-number + solve-path-touching diff did its job (proved honest-failure + the seal + the blind-vs-true distinction by recomputation, not assertion), and the in-tick MINOR fix kept the headline artifact honest (no stale residual can masquerade as current). Genchi-genbutsu: running `make run` myself + reading the artifacts (not trusting the Generator/review narrative) is what confirmed the DoD-shaped result. Konnyaku-stone moment: the seal test caught my own fix-comment slip ("truth.json") — the Poka-Yoke is load-bearing even against the operator. KAIZEN (S7): S7 CLOSES M0 — build the 3 formal seal tests (static/runtime/clean-FITS) + the @solver golden-e2e DoD gate + README/LICENSE/requirements.lock; fold in the carried convention-bound note (the 10" gate can't catch a 1-px bug; lean on the round-trip seal or add the <5" stretch sanity); on DoD met (RUN the named green commands + verify clean-clone reproduce) TAG v0.1.0. Anti-spin: green merge → no_progress stays 0. Per §3.2 the integrate tick advances the ladder: status set FRESH for S7 (the S7 PLAN tick is next).
+
+- [tick 16 | GENBA] Thought: status FRESH, next rung S7 (the FINAL M0 sprint — closes M0); this is the FIRST tick driven by the `/autobuild-loop` SKILL reading `.autobuild/` (post-S8 runner migration, NOT the bespoke chat prompt) — verify §3.5 gates + plan + baseline before planning, AND prove the engine reads the migrated paths. → Action(load `.autobuild/config.md` via config.load_config + read `.autobuild/loop_state.md`; git status/HEAD/branches + commits since 9b06df8; re-hash plan; baseline `pytest -m "not solver"` + `-m solver` via ~/tracklet/.venv/bin/python3) → Observation: ENGINE READ `.autobuild/` CLEANLY — config.md schema-VALID (ladder M0..M_final; green = not-solver/solver), loop_state.md reconstructed (S7 / phase HANSEI / status FRESH / tick_lock null). Gates: tree clean, HEAD==main, 0 feat/* branches; commits since last_green 9b06df8 = c03e978 (tick-15 bookkeeping) + 5e70012 (S8 migration) — BOTH non-source (loop_state move + config), no drift/Andon; plan SHA matches d7237cdd…; baseline 95 non-solver + 4 @solver green (real `make run` blind residual 2.08"). Runner migration verified LIVE.
+- [tick 16 | RESEARCH] Thought: S7 is the milestone-completing hardening sprint — formal seal tests + a golden-e2e gate over already-built modules + docs; no external dataset/API/algorithm unknown (the README footprint/uninstall/licence facts are real but confirmed in BUILD). → Action(none — JIT SKIP) → Observation: research SKIPPED (mechanical hardening over built modules; S7 settled by the approved plan's Sprint 7).
+- [tick 16 | IDEATE] Thought: S7 closes M0 + formally touches the seal → a BRIEF brief (Sprint 7 fully specified; no design fork). → Action(emit BRIEF design brief, below) → Observation: brief recorded. Pre-Mortem clear: (a) adds seal tests + golden-e2e + docs over built modules (re-invents nothing); (b) the seal tests VERIFY the sealed-truth / non-circularity invariant (preserve it, formally — they do not weaken it); (c) signed module contracts preserved (no new source module; if a seal test needs a tiny test-only hook in a solving module, re-verify that module's contract + the seal); (d) scope == Sprint 7 (ACs 7.1-7.5 + the carried 1-px-convention tightening); no speculative scope.
+- [tick 16 | PLAN] Thought: JIT shortcut — S7 fully covered by the approved plan (Sprint 7, ACs 7.1-7.5); skip /ultraplan, consume it, keep plan_sha256. → Action(set status PLAN_LOCKED_AWAITING_BUILD + phase PLAN; keep plan_file/SHA; write the S7 BUILD next_action) → Observation: status PLAN_LOCKED_AWAITING_BUILD; plan_sha256 unchanged d7237cdd…; per §3.2 this FRESH tick HARD-STOPS at the plan-lock — the S7 BUILD is the NEXT tick (a fresh `/autobuild-loop` session). no_progress stays 0 (plan-lock = progress, §3.3). ⚠️ DRIVEN AS A ONE-OFF PROOF TICK (operator-invoked to validate the S8 migration): NO next tick scheduled, NO ScheduleWakeup, NOT a recurring loop — the autonomous build resumes when a human launches `/autobuild-loop` on ~/tracklet in a fresh session.
+
+### increment design brief (tick 16)
+
+```
+S7 — seal tests + golden e2e + README/docs -> M0 DoD + tag v0.1.0. Build EXACTLY Sprint 7 of the approved plan
+(lucky-dazzling-parasol.md). S7 is the FINAL M0 rung + HIGH-RISK (completes the milestone + formally touches the
+seal) -> MANDATORY 2nd independent LOCAL review (cost guard: local only).
+
+SCOPE (JIT — Sprint 7, full detail in next_action):
+  (1) tests/test_seal.py — STATIC (AST/source: solve_pointing/detect_streak/measure_position import no truth
+      loader + never name the sealed artifact), RUNTIME (monkeypatch score._load_truth to RAISE -> the solving
+      path still completes; only score fails), CLEAN-FITS (image.fits header has NO WCS keywords).
+  (2) tests/test_golden_e2e.py — @solver, THE executable DoD: render frozen scene -> FULL blind-solve pipeline ->
+      assert residual_arcsec < RESIDUAL_THRESHOLD_ARCSEC; ALWAYS report the actual number + the ~2-4" band.
+  (3) README honesty (synthetic-from-REAL-data, NOT a real-sensor result; threshold + error budget; exact
+      clone -> make setup -> make test-golden steps; ON-DISK FOOTPRINT + UNINSTALL; ASTAP fallback; Gaia DR3 /
+      CelesTrak / astrometry.net provenance + licences) + LICENSE + finalize requirements.lock.
+  ACs 7.1 (3 seal tests), 7.2 (golden test passes, number always reported), 7.3 (clone+steps reproduce clean),
+  7.4 (README states what it PROVES AND does NOT + footprint/uninstall), 7.5 (non-solver suite green w/o solver).
+  CARRIED (S5 review, ACTIONABLE): the 10" gate is loose vs a 1-px convention error (~7" < 10"); the convention is
+  already pinned by the round-trip seal tests (S2 AC 2.4 + S5 AC 5.1b) -> NOTE that coverage OR add the <5" stretch
+  sanity bound so a pixel-convention regression can't hide under the 10" gate.
+  On DoD met (RUN make test-golden + pytest -m "not solver" + verify clean-clone reproduce) -> merge feat/S7 ->
+  main + TAG v0.1.0 (M0 complete). Do NOT push (human-gated).
+
+TOUCHED: tests/test_seal.py + tests/test_golden_e2e.py (new) + README + LICENSE + requirements.lock. The 7 product
+modules are NOT re-implemented (S7 hardens + documents). Sealed-truth preserved (the seal tests verify it).
+
+JUDGE: N/A — brief brief (Sprint 7 fully specified; no design fork).
+```
