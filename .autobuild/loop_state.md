@@ -1,133 +1,90 @@
 ---
 current_milestone: M1
-current_increment: "M1 Sprint 3 (real truth) — NEXT tick. Sprint 2 (ingest) DONE+merged @ df22ff4 this tick (tick 22)."
-last_increment_id: "M1 S2 — ingest: real FITS → normalized WCS-stripped clean image (seal-preserving), MERGED @ df22ff4"
-phase: HANSEI  # tick 22 BUILD COMPLETE — M1 Sprint 2 (ingest) built + 2nd-independent-review ACCEPT + MERGED green. Tick ENDS here (§3.2 BUILD tick = green merge).
-status: PLAN_LOCKED_AWAITING_BUILD  # Sprint 2 DONE+merged; the M1 plan is consumed sprint-by-sprint (plan_sha256 unchanged), so the NEXT tick is the Sprint-3 real-truth BUILD. ⚠️ AC 2.5 (binding @solver de-risk) was SKIPPED this tick (2.4GB Zenodo frame exceeded the 600s fetch window) — see needs_human: AC 2.5 must be EXECUTED against the real frame before the Sprint-1 lock is fully confirmed (re-run fetch.sh in a longer window; also re-exercised at Sprint-4 AC 4.1). A SKIP is NOT a frame rejection.
-last_green_sha: df22ff4  # M1 Sprint-2 merge (--no-ff); 121 non-solver + 5 @solver green on main, M0 golden e2e 2.081" intact
+current_increment: "M1 Sprint 4 (run.py --image/--meta + AC-4.6 plausibility gate) — NEXT tick. Sprint 3 (real truth) DONE+merged @ 534bc31 this tick (tick 23)."
+last_increment_id: "M1 S3 — real-truth: propagate_satellite_radec extracted behavior-preserving + realtruth assembles the sealed real-frame truth.json (TLE→skyfield topocentric @ exposure midpoint), consumed by score UNCHANGED; seal extended over the new writer; DDOTI site CONFIRMED to published OAN-SPM. MERGED @ 534bc31."
+phase: HANSEI  # tick 23 BUILD COMPLETE — M1 Sprint 3 (real-truth) built + 2 independent local review passes ACCEPT + MERGED green. Tick ENDS here (§3.2 BUILD tick = green merge).
+status: PLAN_LOCKED_AWAITING_BUILD  # Sprint 3 DONE+merged; the M1 plan is consumed sprint-by-sprint (plan_sha256 unchanged), so the NEXT tick is the Sprint-4 run.py --image/--meta BUILD. ⚠️ Sprint 4 is @solver AND NEEDS THE REAL FRAME (AC 4.1 e2e + AC 2.5 re-exercise) — the 2.4GB BW3 Zenodo frame has NOT been fetched (exceeded the 600s curl window in tick 22). The frame MUST be obtained (longer window / out-of-band fetch.sh) BEFORE Sprint 4 can complete. See needs_human.
+last_green_sha: 534bc31  # M1 Sprint-3 merge (--no-ff); 135 non-solver + 5 @solver green on main, M0 golden e2e 2.081" intact
 green_suites:
-  - {cmd: 'pytest -m "not solver"', passed: 121, failed: 0, note: 'M1 S2 added tests/test_ingest.py (9: AC 2.1 BSCALE/BZERO unsigned-16 recovery, native byte order, non-finite→finite-median fill, orientation identity, named-HDU MEF select; AC 2.2 written image.fits WCS-free + disk round-trip; AC 2.3/2.4 signature + no json.load) + 3 EXTENDED seal tests in tests/test_seal.py (clean-FITS parametrized over ingest; static-import forbidden list extended over ingest; repo-wide alias-resistant AST "json.load/json.loads only in score.py across src/" — catches "import json as X; X.loads" + "from json import loads", immune to skyfield load.timescale()/astropy reads). All 3 new seal tests mutation-verified load-bearing. write_clean_fits factored from render.py:351-356 behavior-preserving. Run via `make test`.'}
-  - {cmd: 'pytest -m solver', passed: 5, failed: 0, skipped: 1, note: 'M0 5 UNCHANGED (golden e2e 2.081" — render write_clean_fits extraction provably behavior-preserving). AC 2.5 (the NORMALIZED real image still blind-solves+detects = binding Sprint-1 confirmation) is PRESENT + skip-if-frame-missing; SKIPPED this tick — fetch.sh hit the 600s curl --max-time on both Zenodo urls (got 160/2400 MB before timeout). NOT a frame rejection; must be RUN once the frame is fetched. Run via `make test-golden`.'}
+  - {cmd: 'pytest -m "not solver"', passed: 135, failed: 0, note: 'M1 S3 added tests/test_realtruth.py (12: AC 3.1 exposure-midpoint = DATE-OBS(start,UTC)+EXPTIME/2 + robust ISO parse + fail-loud on unparseable/nonpositive — 5 tests; AC 3.2 satellite RA/Dec via the SHARED render.propagate_satellite_radec topocentric + parallax-honored — 2; AC 3.3 truth.json round-trips through score._load_truth UNCHANGED + scored_truth schema matches render — 2; AC 3.5 midpoint + header-WCS returned in-memory + writer-names-no-read-token — 3) + 1 render-helper test (propagate_satellite_radec pure extraction == inline, behavior-preserving) + 1 EXTENDED seal test (static-import forbidden list extended over the THIRD writer realtruth, symmetric to ingest) + updated the site-confirmation fixture test to the confirmed OAN-SPM coords. All load-bearing assertions mutation-verified (midpoint-vs-start, scored_truth key, RA/Dec swap, repo-wide json.load guard catches a smuggled alias in realtruth, realtruth import seal). Run via `make test`.'}
+  - {cmd: 'pytest -m solver', passed: 5, failed: 0, skipped: 1, note: 'M0 5 UNCHANGED (golden e2e 2.081" — render propagate_satellite_radec extraction provably behavior-preserving, AC 3.4: render 20 unit tests + golden e2e green). AC 2.5 (NORMALIZED real image still blind-solves+detects = binding Sprint-1 confirmation) STILL PRESENT + skipped (real BW3 frame absent — gitignored *.fits; not yet fetched). Run via `make test-golden`.'}
 plan_file: ~/.claude/plans/plan-the-m1-real-image-snappy-bunny.md
 plan_sha256: 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed
-no_progress_count: 0  # Sprint-2 merged GREEN this tick (tick 22) → stays 0 (a green merge resets/holds at 0, §3.3).
+no_progress_count: 0  # Sprint-3 merged GREEN this tick (tick 23) → stays 0 (a green merge resets/holds at 0, §3.3).
 open_findings:
   # CARRIED M1 watch-items (NOT blocking; bite at the named sprint):
-  - "[BINDING / NEXT @solver window] AC 2.5 NOT YET EXECUTED against the real frame — the 2.4GB BW3 Zenodo archive exceeded the 600s curl --max-time on BOTH urls this tick (got 160/2400 MB). AC 2.5 (the NORMALIZED ingest image still blind-solves+detects) is the BINDING confirmation of the provisional Sprint-1 lock. The test is PRESENT + correct (skip-if-frame-missing, mutation-safe shape). It MUST be RUN once the frame is fetched (longer window / out-of-band fetch via tests/fixtures/real/fetch.sh) BEFORE the Sprint-1 lock is fully confirmed; it is ALSO re-exercised at Sprint-4 AC 4.1. A SKIP is NOT a frame rejection."
-  - "[Sprint 3 / AC 3.1] DATE-OBS=2022-11-18T02:47:16.782 is the exposure START (UTC) NOT the midpoint — midpoint = start + EXPTIME(10s)/2 = +5 s; PIN with fail-loud at AC 3.1 (a 1 s LEO timing error ≈ arcminutes). meta.toml [timing] already records date_obs as START + exptime_s=10.0."
-  - "[Sprint 3] meta.toml [observatory] OAN-SPM/DDOTI (+31.0442/−115.4633/2790 m) is site_confirmed=false — CONFIRM the exact DDOTI station geodetic coords before pinning the topocentric satellite-truth (LEO parallax is material)."
-  - "[Sprint 3/4] DDOTI frame carries NO header WCS (meta.toml header_wcs_present=false). The plan's non-circularity table assumed header-WCS pointing-truth; for THIS frame, pointing-truth = commanded STRCURA/STRCUDE (303.6068/−16.2040) + a FIXED C1 offset derived NON-CIRCULARLY in Sprint 4 (AC 4.6) by blind-solving ≥3 OTHER C1 frames. AC 4.6 plausibility gate = |recovered − (commanded+mean_offset)| ≤ 0.5×fov_deg=1.705°. ingest.IngestResult.header carries the source header in-memory for the report diagnostic; it is NEVER fed to the blind solve."
+  - "[BINDING / NEXT @solver window — Sprint 4 gating] AC 2.5 STILL NOT EXECUTED against the real frame — the 2.4GB BW3 Zenodo archive has not been fetched (exceeded the 600s curl --max-time in tick 22). AC 2.5 (the NORMALIZED ingest image still blind-solves+detects) is the BINDING confirmation of the provisional Sprint-1 lock. The test is PRESENT + correct (skip-if-frame-missing). Sprint 4 (run.py --image/--meta, @solver, AC 4.1 e2e) ALSO needs the real frame — so the frame MUST be obtained (longer window / out-of-band fetch via tests/fixtures/real/fetch.sh, or raise the script's curl --max-time) BEFORE Sprint 4 can complete + before the Sprint-1 lock is fully confirmed. A SKIP is NOT a frame rejection."
+  - "[Sprint 4 / AC 4.6 — NON-CIRCULARITY, load-bearing] DDOTI frame carries NO header WCS (meta header_wcs_present=false). For THIS frame, pointing-truth = commanded STRCURA/STRCUDE (303.6068/−16.2040) + a FIXED C1 offset DERIVED NON-CIRCULARLY in Sprint 4 by blind-solving ≥3 OTHER C1 frames (scatter <~0.1° or Andon). AC 4.6 plausibility gate = |recovered − (commanded+mean_offset)| ≤ 0.5×fov_deg=1.705°. Do NOT use THIS frame's own recovered−commanded (circular). ingest.IngestResult.header carries the source header in-memory for the report diagnostic; NEVER fed to the blind solve. The realtruth scored truth (306.525,−14.889) lands 0.97° from the tick-21 blind-solved center (305.557,−14.964) = INSIDE the 1.705° half-field — a strong sign the frame + truth are coherent, but the BINDING numeric residual is Sprint 4/6, not this geometric check."
   - "[S4 watch, real trail] detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol → midpoint bias. BW3 raw smoke (Sprint 1) detected a 4956-px bright trail @126.16° — watch midpoint robustness on the real trail at Sprint 4."
   - "[benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT)."
+  # CLOSED this tick (tick 23, Sprint 3):
+  - "[CLOSED tick 23 — AC 3.1] exposure-midpoint timing semantics PINNED: realtruth.exposure_midpoint_utc = DATE-OBS(start,UTC)+EXPTIME/2, fail-loud on unparseable/nonpositive (mutation-verified). Review pass 1 measured the sat moves 5285\" in the 5s start→midpoint window — so the start-vs-midpoint distinction is enormously material (>>10\" gate) and is now locked."
+  - "[CLOSED tick 23 — AC 3.2 site] DDOTI/OAN-SPM site CONFIRMED to the published OAN-SPM position 31.044333/−115.46375/2830 m (airmass.org / OAN-UNAM); meta.toml site_confirmed=true; PROVENANCE.md + the fixture-integrity test updated. Residual within-campus uncertainty <~25\" (overhead worst case), below the dominant ~arcminute TLE-age along-track term."
 next_action: >-
-  ✅ M1 SPRINT 2 COMPLETE + MERGED (tick 22, @ df22ff4). ingest_external_image normalizes a real FITS
-  (HDU-select / BSCALE+BZERO / native byte order / non-finite→finite-median / orientation identity) → WCS-free
-  image.fits; seal EXTENDED over the new writer (3 new tests, all mutation-verified load-bearing); write_clean_fits
-  factored from render behavior-preserving (golden e2e 2.081" intact). The NEXT tick is the SPRINT 3 (real-truth) BUILD.
+  ✅ M1 SPRINT 3 COMPLETE + MERGED (tick 23, @ 534bc31). (a) render.propagate_satellite_radec extracted PURE +
+  behavior-preserving (render._propagate_satellite now a thin loop over it; render 20 unit tests + golden e2e 2.081"
+  green = AC 3.4). (b) NEW src/tracklet/realtruth.py: exposure_midpoint_utc (DATE-OBS start,UTC + EXPTIME/2, fail-loud,
+  AC 3.1) + assemble_real_truth (propagate the committed BW3 TLE via the SHARED helper TOPOCENTRIC @ the midpoint →
+  truth.json scored_truth that score._load_truth reads UNCHANGED, AC 3.2/3.3; header WCS + midpoint returned IN-MEMORY,
+  AC 3.5; json.dump only → score stays the SOLE json.load reader). Seal EXTENDED symmetrically over the new writer
+  (test_static_solving_module_does_not_import_realtruth) + the repo-wide alias-resistant json.load guard already covers
+  it (mutation-verified). DDOTI site CONFIRMED to published OAN-SPM (31.044333/−115.46375/2830 m; site_confirmed=true).
+  135 non-solver + 5 @solver green. 2 independent local review passes ACCEPT; satellite-truth re-derived <1e-9 deg from
+  scratch + lands 0.97° INSIDE the blind-solved frame field (305.557,−14.964) = a strong non-circular cross-check.
+  The NEXT tick is the SPRINT 4 (run.py --image/--meta) BUILD.
 
-  >>> ⚠️ CARRIED BLOCKER FOR THE NEXT @solver WINDOW — AC 2.5 (the binding Sprint-1 confirmation) has NOT yet
-  executed against the real frame: the 2.4 GB BW3 Zenodo archive exceeded the 600s curl --max-time on BOTH urls this
-  tick (160/2400 MB downloaded before timeout). The test is PRESENT + correct (skip-if-frame-missing). Before the
-  Sprint-1 lock is fully confirmed, FETCH the frame (a longer window / out-of-band run of tests/fixtures/real/fetch.sh,
-  or raise the script's curl --max-time) and RUN `make test-golden` → AC 2.5 must return non-failure for BOTH
-  solve_pointing + detect_streak on the NORMALIZED image. A SKIP is NOT a frame rejection; AC 2.5 is also re-exercised
-  at Sprint-4 AC 4.1. Do this at the next @solver-capable tick (Sprint 3 is non-solver, so it can proceed first).
+  >>> ⚠️ SPRINT-4 GATING DEPENDENCY — THE REAL FRAME IS NOT YET FETCHED. Sprint 4 is @solver: AC 4.1 runs the FULL
+  real pipeline end-to-end (needs the frame) and re-exercises AC 2.5 (the binding Sprint-1 confirmation, also still
+  un-run). The 2.4 GB BW3 Zenodo archive exceeded the 600s curl --max-time in tick 22. BEFORE the Sprint-4 BUILD can
+  complete, FETCH the frame: run tests/fixtures/real/fetch.sh in a longer window (out-of-band), OR raise its
+  curl --max-time, OR Sam drops the funpacked 20221118T024706C1o.fits into tests/fixtures/real/. The fetch.sh streams
+  ONLY the single 17.5 MB member (member SHA256 b6dcf797…19ca1) — it never lands the 2.4 GB; the slow part is the
+  archive's server-side range read. (Sprint 4 is @solver-gated, so it CANNOT proceed frame-absent the way Sprint 3
+  (non-solver) did. If a fresh tick reaches Sprint 4 with the frame still missing, it should FETCH first or Andon to
+  Sam — do NOT re-run a blind web search for the frame; the frame is identified + fetch recipe committed.)
 
-  >>> SPRINT 3 (real truth) BUILD CONTRACT (plan Sprint 3, ACs 3.1-3.5; HIGH-RISK = real satellite-truth assembly +
-  the report's sole-truth boundary → mandatory 2nd independent LOCAL review). (a) Refactor render to expose a PURE
-  `propagate_satellite_radec(tle, lat_deg, lon_deg, elev_m, when_utc) -> (ra,dec)` factored from render._propagate_satellite
-  (render.py:129; the no-epoch ICRS `(sat - wgs84.latlon(...)).at(t).radec()` call — REUSE IT IDENTICALLY so truth shares
-  the solver's ICRS frame); render's 19 unit tests + golden e2e 2.081" MUST stay green (behavior-preserved, AC 3.4).
-  (b) TDD the real-truth assembly (new tests/test_realtruth.py): read DATE-OBS (exposure START, UTC) + EXPTIME from meta
-  → exposure MIDPOINT = start + EXPTIME/2 (AC 3.1 — PIN start-not-midpoint semantics, parse ISO with/without T +
-  fractional seconds, FAIL LOUD on ambiguity; a 1 s LEO error ≈ arcminutes). Propagate the committed BW3 TLE via the
-  SHARED helper using the observatory site TOPOCENTRIC (LEO parallax mandatory — AC 3.2; CONFIRM the exact DDOTI site
-  coords first, meta.toml site_confirmed=false). Write truth.json with `scored_truth={ra_deg,dec_deg}` EXACTLY as
-  render._build_truth so score._load_truth consumes it UNCHANGED (AC 3.3 round-trip). Return the header WCS + midpoint
-  IN-MEMORY only (AC 3.5 — never written into the solver's image.fits; report reads it in-memory, NO json.load).
-  NOTE: this frame has NO header WCS (meta header_wcs_present=false) → pointing-truth = commanded STRCURA/STRCUDE +
-  Sprint-4 empirical C1 offset, NOT a header WCS; AC 3.5's checkable form is AC 4.4 (the solver path points at the
-  WCS-stripped clean image). truth.json writing is the ingest writer's Sprint-3 extension OR a realtruth helper —
-  either way score stays the SOLE json.load reader (the alias-resistant seal test now guards this repo-wide).
+  >>> SPRINT 4 (run.py --image/--meta + AC-4.6) BUILD CONTRACT (plan Sprint 4, ACs 4.1-4.6; HIGH-RISK = produces the
+  real residual + the non-circular plausibility gate → mandatory 2nd independent LOCAL review). TDD an argparse branch
+  in run.py: when --image PATH --meta PATH given, BYPASS build_scene/render_scene; ingest_external_image → clean WCS-free
+  image.fits (Sprint 2) + assemble_real_truth → truth.json (Sprint 3, this tick); then solve_pointing(clean_image,
+  {"fov_deg": meta.solver.fov_deg}) [BLIND — WCS-free image + scale hint only, AC 4.4] → detect_streak(clean_image) →
+  measure_position(detection, solve.wcs) [the BLIND-RECOVERED WCS, AC 4.5 — NEVER the header WCS] → score(measured,
+  truth_path) → residual + report. Preserve exit codes 2/3 + "no fabricated residual on a typed failure" (AC 4.3).
+  Synthetic default path UNCHANGED (AC 4.2 = M0 golden e2e + all M0 tests green). AC 4.6 PLAUSIBILITY GATE (anti
+  wrong-field-lock, load-bearing): derive a FIXED C1-camera offset NON-CIRCULARLY by blind-solving ≥3 OTHER DDOTI C1
+  frames (mean offset commanded→recovered; scatter <~0.1° or Andon), then trust a finite residual ONLY if |recovered
+  center − (commanded STRCURA/STRCUDE + mean_offset)| ≤ 0.5×fov_deg = 1.705°; else report an HONEST TYPED failure
+  (wrong asterism), not a flattering residual. Do NOT use THIS frame's own recovered−commanded (circular). Compute the
+  gate from in-memory WCSs downstream of the solver; never feed it back in.
 
   NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load/json.loads ONLY in score.py
-  (alias-resistant AST guard now LIVE in test_seal.py); solve/detect/measure never read truth, never take a header WCS;
-  the solver ALWAYS gets a WCS-stripped image; ingest + any Sprint-3 truth writer covered by the EXTENDED seal tests;
-  do NOT weaken the seal to pass a bad test. (b) NON-CIRCULARITY — header/pointing-truth read ONLY by ingest + the
-  report diagnostic, IN-MEMORY; satellite-truth via score._load_truth UNCHANGED; NEVER feed any pointing prior into the
-  blind solve (it gets ONLY a WCS-stripped image + coarse fov_deg). (c) HONEST TYPED FAILURE — SolveFailure/DetectFailure
-  → exit 2/3 + labelled msg + NO residual.txt; a wrong-field lock failing AC-4.6 (|recovered − (commanded+offset)| ≤
-  0.5×fov_deg=1.705°) is an honest typed failure, not a flattering residual; a NUMERIC residual PASSING AC-4.6 is
-  REQUIRED before tagging v0.1.1. (d) REUSE render's propagate_satellite_radec + write_clean_fits (already factored this
-  tick) as behavior-preserving; reuse solve/detect/score verbatim. (e) YAGNI — no streak-vs-catalogue matcher (PHASE 2).
-  (f) ALL review LOCAL/FREE (/code-review ultra BANNED); NEVER auto-push (v0.1.1 LOCAL only); NEVER write a handoff file.
+  (alias-resistant AST guard LIVE; now covers render/ingest/realtruth writers); solve/detect/measure never read truth,
+  never take a header WCS; the solver ALWAYS gets the WCS-stripped clean image; do NOT weaken the seal to pass a bad
+  test. (b) NON-CIRCULARITY — header/pointing-truth read ONLY by ingest + the report diagnostic IN-MEMORY; satellite
+  truth via score._load_truth UNCHANGED; NEVER feed any pointing prior into the blind solve (WCS-free image + coarse
+  fov_deg only). (c) HONEST TYPED FAILURE — SolveFailure/DetectFailure → exit 2/3 + labelled msg + NO residual.txt; a
+  wrong-field lock failing AC-4.6 is an honest typed failure, not a flattering residual; a NUMERIC residual PASSING
+  AC-4.6 is REQUIRED before tagging v0.1.1. (d) REUSE solve_pointing/detect_streak/measure_position/score VERBATIM +
+  ingest/realtruth (built); render extractions already done + behavior-preserving. (e) YAGNI — no streak-vs-catalogue
+  matcher (PHASE 2). (f) ALL review LOCAL/FREE (/code-review ultra BANNED — the Task/Agent spawn tool has been
+  UNAVAILABLE since tick 21, so run TWO genuinely separate in-parent review passes for the high-risk merge); NEVER
+  auto-push (v0.1.1 LOCAL only); NEVER write a handoff file.
 
-  >>> REMAINING M1 BUILD SEQUENCE (plan plan-the-m1-real-image-snappy-bunny.md): S3 = real-truth (THIS next tick,
-  non-solver + render-extraction regression); S4 = run.py --image/--meta + AC-4.6 STRICT plausibility gate (@solver,
-  needs the real frame → fetch first; derive the C1 offset NON-CIRCULARLY from ≥3 OTHER C1 frames); S5 = honest
-  degradation report (real residual_arcsec always; 5 named sources incl. ~0.6d TLE-age along-track error; pointing-vs-
-  timing decomp, no json.load outside score.py); S6 = numeric residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL.
-  GENBA each tick: clean tree, only loop-authored commits since last_green df22ff4, re-hash plan 955c27e3, baseline green.
+  >>> REMAINING M1 BUILD SEQUENCE: S4 = run.py --image/--meta + AC-4.6 (THIS next tick, @solver — FETCH THE FRAME
+  FIRST; derive the C1 offset non-circularly from ≥3 OTHER C1 frames); S5 = honest degradation report (real
+  residual_arcsec always; 5 named sources incl. the ~0.6 d TLE-age along-track error — review pass 1 measured the sat
+  moves 5285" in the 5 s exposure, so timing/ephemeris error dominates; pointing-vs-timing decomp, no json.load outside
+  score.py); S6 = numeric residual PASSING AC-4.6 + README "Real image (M1)" + tag v0.1.1 LOCAL. GENBA each tick: clean
+  tree, only loop-authored commits since last_green 534bc31, re-hash plan 955c27e3, baseline green.
 
-  >>> COURTESY CHECKPOINT FOR SAM (Sprint-1→Sprint-2 boundary): the plan's AC-1.5 human andon gate was ALREADY
-  cleared by Sam at tick 19/20 (frame + NORAD id + strict-AC-4.6 approach confirmed; Sprints 1→6 authorized to run
-  autonomously frame-in-hand). The Sprint-1 deliverable is now done and merged green, and PROVENANCE.md records the
-  AC-1.5 sign-off. So no NEW human gate is mechanically required before Sprint 2 — the binding confirmation is
-  Sprint-2 AC 2.5 (the normalized image still blind-solves+detects), not another human stop. This checkpoint is a
-  COURTESY: if Sam wants to re-inspect the committed PROVENANCE.md / fetch.sh / TLE / smoke before ingest, do so now;
-  otherwise the next /autobuild-loop tick proceeds to the Sprint-2 ingest BUILD.
-
-  >>> COMMITTED SPRINT-1 ARTIFACTS (tests/fixtures/real/): bluewalker3_53807.tle (NORAD 53807, epoch 22321.51776124
-  = 2022-11-17T12:25:34Z = 0.598d pre-exposure, checksum-valid, validates via scene.parse_tle_text); PROVENANCE.md
-  (full source/retrieval/identity/TLE/site/smoke + AC-1.5 CLEARED); fetch.sh (streams ONLY the 17.5 MB member —
-  member SHA256 b6dcf797…19ca1 — never lands the 2.4 GB; two urls; funpack; recipe RUN LIVE this tick); meta.toml
-  (verified header values for the Sprint-4 --image/--meta path). The .fits/.fits.fz are gitignored (*.fits) → run
-  fetch.sh to obtain the frame on demand. Live smoke re-proven this tick: solve_pointing→SolveResult center
-  (305.557,−14.964); detect_streak→StreakDetection 4956 px @126.16°.
-
-  >>> SPRINT 2 (ingest) BUILD CONTRACT (plan Sprint 2, ACs 2.1-2.5; HIGH-RISK = EXTENDS the seal over a NEW writer
-  → mandatory 2nd independent LOCAL review): TDD ingest.ingest_external_image(image_path, meta, out_dir) →
-  IngestResult. Read the real FITS (astropy.io.fits) → 2-D float32: SELECT the science image HDU (first 2-D image
-  HDU, or one named in meta — here HDU 0); APPLY BSCALE/BZERO when casting integer→float32 (this frame is BITPIX 16
-  / BZERO 32768 unsigned — let astropy do do_not_scale_image_data=False); canonicalize NATIVE byte order; replace
-  NON-FINITE pixels (NaN/Inf) with the frame median; PRESERVE orientation (NO flip/transpose). Write a WCS-FREE
-  image.fits via the factored write_clean_fits (extract render.py:351-356 as a behavior-preserving helper — render
-  tests + golden e2e MUST stay green) + a truth.json the scorer can read. EXTEND the seal: parametrize test_seal.py
-  clean-FITS + static-import over ingest; add the "json.load only in score.py across src/" assertion matching the
-  AST json.load/json.loads token SPECIFICALLY (NOT a bare `load` substring → would false-positive on skyfield
-  load.timescale() render.py:138 + astropy reads). AC 2.5 (@solver, the BINDING de-risk): re-run solve_pointing +
-  detect_streak on the NORMALIZED ingest output (not just the raw candidate) → both non-failure; if AC 2.5 FAILS,
-  the frame is REJECTED → return to Sprint 1 for the next candidate (do NOT weaken the seal or the gate to pass it).
-  To exercise ingest, fetch the frame via tests/fixtures/real/fetch.sh (skip-if-frame-missing for the @solver path).
-
-  NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load ONLY in score.py; solve/detect/
-  measure never read truth, never take a header WCS; the solver ALWAYS gets a WCS-stripped image; the NEW ingest
-  writer is covered by EXTENDED seal tests; match the AST json.load/json.loads token SPECIFICALLY (NOT a bare `load`
-  substring → false-positives on skyfield load.timescale() at render.py:138 + astropy reads); do NOT weaken the seal
-  to pass a bad test. (b) NON-CIRCULARITY — pointing-truth (commanded+offset) read ONLY by ingest + the report
-  diagnostic, IN-MEMORY (never json.load outside score.py); satellite-truth via score._load_truth UNCHANGED; NEVER
-  feed any pointing prior into the blind solve (it gets ONLY a WCS-stripped image + a coarse fov_deg scale hint).
-  (c) HONEST TYPED FAILURE — SolveFailure/DetectFailure → exit 2/3 + labelled msg + NO residual.txt; a wrong-field
-  lock failing AC-4.6 is an honest typed failure, not a flattering residual; a NUMERIC residual PASSING AC-4.6 is
-  REQUIRED before tagging v0.1.1. (d) REUSE render's _propagate_satellite + clean-FITS write as behavior-preserving
-  extractions (render tests + golden e2e stay green); reuse solve/detect/score verbatim. (e) YAGNI — no non-FITS
-  ingest beyond the funpack this frame needs, no streak-vs-catalogue matcher (PHASE 2, scoped-only). (f) ALL review
-  LOCAL/FREE (/code-review ultra BANNED); NEVER auto-push (v0.1.1 LOCAL only); NEVER write a handoff file. Carry the
-  2 M1 watch-items (open_findings note above) + the Sprint-3 timing/site confirms (DATE-OBS is exposure START not
-  midpoint → midpoint = start + EXPTIME/2, pinned with fail-loud at AC 3.1; meta.toml site_confirmed=false).
-
-  >>> REMAINING M1 BUILD SEQUENCE (plan plan-the-m1-real-image-snappy-bunny.md): S2 = ingest (THIS next tick); S3 =
-  real-truth (pointing-truth = commanded STRCURA/STRCUDE + empirical-C1-offset; satellite-truth = BW3 TLE → skyfield
-  TOPOCENTRIC at exposure midpoint → truth.json scored_truth; reuse render._propagate_satellite behavior-preserving;
-  PIN DATE-OBS=start semantics + CONFIRM the exact DDOTI site coords); S4 = run.py --image/--meta + AC-4.6 STRICT
-  (derive the fixed C1 offset NON-CIRCULARLY from ≥3 OTHER C1 frames, scatter <~0.1° or Andon; gate = |recovered −
-  (commanded+mean_offset)| ≤ 0.5×fov_deg = 1.7°; do NOT use this frame's own recovered−commanded = circular); S5 =
-  honest degradation report (real residual_arcsec always; 5 named sources incl. ~0.6d TLE-age along-track error
-  under timing/ephemeris uncertainty; pointing-vs-timing decomp, no json.load outside score.py); S6 = numeric
-  residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL. GENBA each tick: clean tree, only loop-authored commits since
-  last_green, re-hash plan 955c27e3, baseline green.
-human_gate: false  # Sprint-2 merged green; no Andon halt. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20, recorded in PROVENANCE.md). NOT a hard human stop this tick. BUT a real-world CARRIED ITEM is surfaced to Sam in needs_human: AC 2.5 (the binding @solver Sprint-1 confirmation) could not run — the 2.4GB Zenodo frame exceeded the 600s fetch window — so it must be executed against the real frame at the next @solver window before the Sprint-1 lock is fully confirmed. Sprint 3 (non-solver) can proceed first.
-tick_lock: "tick-23 BUILD live (M1 Sprint 3 real-truth) — feat/m1-s3-realtruth; began after GENBA gates PASS (clean tree @ dc4247d, plan SHA 955c27e3 matches, baseline 121 non-solver + 5 @solver green, no_progress 0). Sprint 3 HIGH-RISK (render-helper extraction + real satellite-truth assembly) → mandatory 2nd independent LOCAL review."
+  >>> COMMITTED REAL-FRAME ARTIFACTS (tests/fixtures/real/): bluewalker3_53807.tle (NORAD 53807, epoch 0.598 d
+  pre-exposure, checksum-valid); PROVENANCE.md (source/retrieval/identity/TLE/site/smoke + AC-1.5 CLEARED + site now
+  CONFIRMED); fetch.sh (streams ONLY the 17.5 MB member, two urls, funpack); meta.toml (verified header values; site
+  CONFIRMED this tick). The .fits/.fits.fz are gitignored → fetch.sh on demand. Live smoke (tick 21): solve_pointing→
+  center (305.557,−14.964); detect_streak→4956 px @126.16°. Sprint-3 scored truth = (306.525,−14.889) @ midpoint
+  2022-11-18T02:47:21.782Z.
+human_gate: false  # Sprint-3 merged green; no Andon halt. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20, PROVENANCE.md). NOT a hard human stop this tick. BUT a real-world GATING ITEM is surfaced to Sam in needs_human: the real BW3 frame is NOT yet fetched, and Sprint 4 (the NEXT tick) is @solver — it CANNOT complete frame-absent. The frame must be obtained (longer-window/out-of-band fetch.sh, or Sam drops the funpacked .fits in) before Sprint 4. This also finally executes AC 2.5 (the binding Sprint-1 confirmation, still un-run).
+tick_lock: null  # cleared at tick-23 end (Sprint-3 BUILD complete + merged green @ 534bc31; feat/m1-s3-realtruth deleted post-merge; no live build in progress)
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
@@ -830,3 +787,56 @@ preserved; (d) scope == Sprint 2 ACs (truth.json correctly deferred to Sprint 3)
 ```
 
 - [tick 22 | HANSEI] What worked: the MUTATION pass earned its keep loudly — the first cut of the repo-wide json.load seal PASSED a mutation that injected `import json as _j; _j.loads(...)` into ingest, exposing that the guard matched only the literal name `json` and an aliased import would slip the seal. Hardening it to resolve every binding of the json module (import / import-as / from-json-import) BEFORE merge means the non-circularity seal genuinely bites on a future regression, not just the obvious form. This is the konnyaku standard: a green seal test that a broken impl would also pass is worse than no test (false confidence). Genchi-genbutsu in REVIEW — re-deriving BSCALE/BZERO recovery, the finite-only median, orientation identity, and the WCS-strip by direct computation in a scratch python rather than trusting the build's own tests — confirmed the normalization is correct against the actual astropy on-disk encoding (signed int16 + BZERO 32768), the exact real-frame reality. Honest scoping under reality: I cut truth.json out of Sprint 2 (the state's next_action had bundled it) because the binding plan ACs put it in Sprint 3 — resisting the over-production of building a truth writer before its sprint. The one painful reality: AC 2.5, the BINDING confirmation of the provisional Sprint-1 lock, could not execute — the 2.4 GB Zenodo archive exceeded the 600s curl window on both urls (160/2400 MB), so the @solver real-frame proof is SKIPPED, not run. The test is correct (skip-if-frame-missing) and the skip is NOT a frame rejection, but honesty demands I flag clearly that the normalized real image has NOT yet been proven to solve+detect this tick — that is the single carried item for Sam + the next @solver window. KAIZEN (Sprint 3): the render extraction continues — propagate_satellite_radec is the next behavior-preserving factor; build it identically to render._propagate_satellite (same no-epoch ICRS skyfield call) so satellite-truth shares the solver's frame, and keep render's 19 unit + golden e2e green. Confirm the DDOTI site coords (site_confirmed=false) before pinning the topocentric propagation (LEO parallax). Env note persists: the Agent/Task spawn tool is unavailable → the mandatory 2nd review ran as a fresh in-parent re-derivation (local/free, cost guard honored); for Sprint 3 (extracts render helpers + assembles real satellite-truth) keep the same two-genuinely-separate-passes discipline. Anti-spin: green merge → no_progress 0. Per §3.2 this BUILD tick ENDS at the green merge; Sprint 3 (real-truth) is the NEXT tick.
+
+- [tick 23 | GENBA] Thought: status PLAN_LOCKED_AWAITING_BUILD for M1 Sprint 3 (real truth) → §3.2 BUILD tick. Sprint 3 touches render (the keystone) via the propagate_satellite_radec extraction, so it IS @solver-relevant (AC 3.4 golden-e2e regression) → verify BOTH baselines. Read loop_state IN FULL + config + the M1 plan IN FULL. → Action(Read state full + config + plan; re-ground render._propagate_satellite/_exposure_times/_build_truth, score._load_truth, ingest, meta.toml, scene TLE API, test_render propagation tests; git status --porcelain + HEAD + branches + tags + log since last_green df22ff4; shasum the M1 plan; `make test` + `make test-golden`) → Observation: clean tree on main @ dc4247d; only the tick-22 loop bookkeeping commit since df22ff4 (loop-authored, no foreign branch — only `main` + tag v0.1.0); plan re-hash 955c27e35f9e…a2ed MATCHES (NOT stale); no_progress 0; tick_lock null. Baseline GREEN: 121 non-solver + 5 @solver (golden e2e 2.081", AC 2.5 skip). Set tick_lock + committed begin-marker 8287368 on main; cut feat/m1-s3-realtruth. ALL §3.5 gates pass.
+- [tick 23 | RESEARCH] Thought: Sprint 3 is mostly settled by the plan, but it carries ONE genuine external unknown the plan + open_findings explicitly flag — the DDOTI/OAN-SPM site coords are site_confirmed=false, and LEO parallax makes the site material (AC 3.2 topocentric). Resolve that fact (targeted confirm, not /deep-research). → Action(WebSearch + WebFetch airmass.org/observatories/spm + OAN-UNAM; quantify the parallax error of a ~63 m site delta for a 510 km LEO object in a scratch python) → Observation: authoritative OAN-SPM = 31.044333°N / −115.46375°W / 2830 m (airmass.org 31°02′39.60″N/115°27′49.50″W, corroborated by OAN-UNAM); the placeholder was 31.0442/−115.4633/2790 m. A ~63 m site error ⇒ up to ~25" apparent shift for a 510 km LEO (overhead worst case) — LARGER than the 10" gate → MATERIAL → confirm-to-source. Will update meta.toml [observatory] to the published values + site_confirmed=true.
+- [tick 23 | IDEATE] Thought: Sprint 3 is fully specified (plan ACs 3.1-3.5) but HIGH-RISK — it extracts a render keystone helper + assembles the SOLE real satellite-truth → a BRIEF design brief, not a full brainstorm. → Action(emit brief, below) → Observation: brief recorded. Pre-Mortem clear: (a) propagate_satellite_radec is a behavior-preserving extraction (re-invents nothing); realtruth is a NEW writer; (b) seal EXTENDED not weakened (realtruth json.dump only; symmetric static-import seal); (c) all solving contracts preserved; (d) scope == plan Sprint 3 ACs (run.py wiring + AC-4.6 are Sprint 4, YAGNI-correct boundary).
+- [tick 23 | BUILD] Thought: §3.2 BUILD under inner TDD (Red→Green→Refactor). Task/Agent spawn tool unavailable this env → build directly in-parent under test-driven-development + konnyaku. → Action(CYCLE 1: RED test_propagate_satellite_radec_pure_helper_matches_inline → ImportError; GREEN extract propagate_satellite_radec(tle,lat,lon,elev,when)→(ra,dec), _propagate_satellite now a thin loop over it; render 20 unit + golden e2e 2.081" green = AC 3.4; commit fbdbfb6. CYCLE 2: confirm DDOTI site → meta.toml [observatory] = published OAN-SPM + site_confirmed=true + PROVENANCE.md updated; RED 5 timing tests → GREEN realtruth.exposure_midpoint_utc (start+EXPTIME/2, robust ISO, fail-loud); RED 7 assembly tests → GREEN assemble_real_truth (shared topocentric propagation → truth.json scored_truth that score._load_truth reads UNCHANGED; header WCS + midpoint in-memory; json.dump only); rephrased a docstring that named the literal json.load token (the tick-22 false-positive class); EXTENDED the seal symmetrically over realtruth; updated the stale site-confirmation fixture test to the confirmed coords; commit 471b074.) → Observation: 135 non-solver + 5 @solver green; golden e2e 2.081" intact.
+- [tick 23 | BUILD-MUTATION] Thought: a green test a broken impl would also pass is worthless → mutation-verify every load-bearing assertion BEFORE review. → Action(M1 midpoint=start (drop +EXPTIME/2) → AC 3.1 timing tests FAIL; M2 wrong scored_truth key → AC 3.3 round-trip+schema FAIL; M3 RA/Dec axis swap → AC 3.2 shared-prop + round-trip FAIL; M4 smuggle `import json as _j; _j.loads()` into realtruth → repo-wide json.load guard FAIL; M5 import realtruth into measure_position → new realtruth static-import seal FAIL; restore each) → Observation: ALL FIVE mutations correctly FAILED the intended test; every restore byte-clean (empty src diff). The new tests genuinely bite.
+- [tick 23 | REVIEW] Thought: Sprint 3 HIGH-RISK (real satellite-truth + render-keystone extraction) → MANDATORY 2nd independent LOCAL review. Spawn tool unavailable → run TWO genuinely separate in-parent passes that RE-DERIVE the claims (local/free; /code-review ultra BANNED). → Action(PASS 1: fully independent scratch-skyfield re-derivation of the midpoint + RA/Dec, NOT calling the module helper; PASS 2: adversarial seal/non-circularity/edge probes — grep json.load across src/, realtruth names no reader/solver token in CODE, realtruth calls no solving module, a non-None pointing_wcs does NOT serialize into truth.json) → Observation: BOTH ACCEPT. Pass 1: module truth == independent re-derivation to <1e-9 deg; the sat moves 5285" in the 5 s start→midpoint window (start-vs-midpoint is enormously material, >>10" gate). Pass 2: json.load in score.py ONLY; realtruth's score/_load_truth mentions are docstring prose (the substring seal applies only to solving modules — realtruth is a writer, like render); non-circularity holds; pointing_wcs in-memory only. Findings: F1 (CARRY) AC 2.5 + the real frame still un-fetched → Sprint 4 gating; F2 (NIT) realtruth's extra provenance keys are ignored by score (round-trip proven). No blocker/major. Genchi-genbutsu cross-check: scored truth (306.525,−14.889) lands 0.97° from the blind-solved center (305.557,−14.964) = INSIDE the 1.705° half-field → the satellite genuinely falls on the real frame.
+- [tick 23 | INTEGRATE] Thought: PHASE-5 gate met (2 ACCEPT passes + every finding dispositioned + both suites green; the one CARRY is a sourcing/network constraint, not a code defect) → integrate. → Action(merge --no-ff feat/m1-s3-realtruth → main @ 534bc31; `make test` + `make test-golden` on main; git branch -d feat/m1-s3-realtruth) → Observation: merged @ 534bc31; 135 non-solver + 5 @solver green on main (golden e2e 2.081" intact); branch deleted, only `main`. Sprint 3 ≠ a milestone (v0.1.1 is plan Sprint 6) → no tag. no_progress_count stays 0 (green merge).
+- [tick 23 | HANSEI] What worked: the targeted RESEARCH step earned its keep — the open_finding flagged site_confirmed=false as a watch-item, but quantifying the parallax (a ~63 m site error ⇒ ~25" > the 10" gate) turned a "maybe confirm later" into a MUST-confirm-this-tick, and the published OAN-SPM coords resolved it to observatory-scale precision (residual within-campus <~25", below the dominant ~arcminute TLE-age term). The two-pass independent review (spawn tool unavailable) was decisive: re-deriving the truth from a fully separate scratch skyfield path proved <1e-9 deg agreement, and the genchi-genbutsu cross-check (scored truth lands 0.97° INSIDE the blind-solved field) is the strongest non-circular evidence the TLE+timing+site assembly is coherent — the satellite really is on the frame. The single most load-bearing pin was AC 3.1: review pass 1 measured the sat moving 5285" in the 5 s exposure, so the start-vs-midpoint distinction is ENORMOUS (>>10" gate); getting it wrong would have silently fabricated a flattering-but-fictional residual the same way a far-epoch TLE would. Honest scoping: I smoothed an earlier panel rather than weakening it — the Sprint-1/2 fixture test had pinned site_confirmed=false; Sprint 3's job is to confirm the site, so I flipped that assertion to GUARD the confirmed published coords (konnyaku stone over the prior layer). KAIZEN (Sprint 4): Sprint 4 is @solver and CANNOT proceed frame-absent the way Sprint 3 (non-solver) did — the real BW3 frame must be FETCHED first (longer-window/out-of-band fetch.sh, or Sam drops the .fits in), which also finally executes AC 2.5. Then derive the C1-camera offset NON-CIRCULARLY from ≥3 OTHER C1 frames for the AC-4.6 plausibility gate (do NOT use this frame's own recovered−commanded). Env note persists: the Agent/Task spawn tool has been unavailable since tick 21 → keep the two-genuinely-separate-in-parent-passes discipline for the Sprint-4 high-risk merge. Anti-spin: green merge → no_progress 0. Per §3.2 this BUILD tick ENDS at the green merge; Sprint 4 is the NEXT tick.
+
+### increment design brief (tick 23)
+
+```
+S3 (M1) — real truth: header-WCS pointing-truth + TLE→skyfield satellite-truth → truth.json. Build
+EXACTLY plan Sprint 3 (ACs 3.1-3.5). HIGH-RISK: extracts a render keystone helper + assembles the SOLE
+real satellite-truth → mandatory 2nd independent LOCAL review.
+
+CHOSEN APPROACH: (a) extract render.propagate_satellite_radec(tle,lat,lon,elev,when_utc)→(ra,dec) PURE
+from render._propagate_satellite (the no-epoch ICRS (sat - wgs84.latlon(...)).at(t).radec() call —
+REUSED IDENTICALLY so real truth shares the solver's ICRS frame); _propagate_satellite becomes a thin
+loop over it (behavior-preserving; render 20 unit + golden e2e green = AC 3.4). (b) NEW realtruth.py:
+exposure_midpoint_utc(date_obs,exptime) = DATE-OBS(start,UTC)+EXPTIME/2, robust ISO parse, fail-loud on
+ambiguity (AC 3.1); assemble_real_truth(tle,meta,out_dir) propagates the committed BW3 TLE via the
+SHARED helper TOPOCENTRIC at the midpoint → truth.json scored_truth that score._load_truth reads
+UNCHANGED (AC 3.2/3.3); returns header WCS + midpoint IN-MEMORY (AC 3.5). json.dump only → score stays
+the SOLE json.load reader. (c) CONFIRM the DDOTI site (meta.toml [observatory] → published OAN-SPM
+31.044333/−115.46375/2830 m, site_confirmed=true; LEO parallax material). EXTEND the seal symmetrically
+over realtruth (static-import forbidden list; repo-wide alias-resistant json.load guard already covers it).
+
+SCOPE CUT (JIT / sprint boundary): Sprint 3 writes the real truth.json + extracts the helper. run.py
+--image/--meta wiring + the AC-4.6 plausibility gate are Sprint 4 — building them now would be
+over-production. The plan's ACs split the work; the binding ACs win.
+
+TOUCHED MODULES: src/tracklet/render.py (extract propagate_satellite_radec + thin-loop _propagate_satellite)
++ src/tracklet/realtruth.py (NEW) + src/tracklet/score.py (docstring: name all 3 writers) + tests/
+test_realtruth.py (NEW) + tests/test_render.py (1 helper test) + tests/test_seal.py (realtruth static-import
+seal) + tests/test_real_fixtures.py (site-confirmation assertion) + tests/fixtures/real/{meta.toml,
+PROVENANCE.md} (site confirmed). solve_pointing/detect_streak/measure_position/ingest/scene/report/run UNTOUCHED.
+
+TEST ORACLE (ACs 3.1-3.5): 3.1 midpoint=start+EXPTIME/2 + robust ISO + fail-loud (5 tests); 3.2 RA/Dec via
+the SHARED propagate_satellite_radec topocentric + parallax-honored (2); 3.3 truth.json → score._load_truth
+UNCHANGED + scored_truth schema (2); 3.4 render 20 unit + golden e2e green (regression); 3.5 midpoint +
+header-WCS in-memory + writer-names-no-read-token (3); + 1 render-helper extraction test + 1 realtruth
+static-import seal. ALL load-bearing assertions mutation-verified.
+
+YAGNI / OUT OF SCOPE: NO run.py wiring (Sprint 4), NO AC-4.6 plausibility gate (Sprint 4), NO degradation
+report (Sprint 5), NO streak-vs-catalogue matcher (PHASE 2).
+
+JUDGE: N/A — brief design brief (Sprint 3 fully specified; no design fork). Pre-Mortem manual, all clear:
+(a) propagate_satellite_radec is a behavior-preserving extraction + realtruth is a new writer (re-invents
+nothing); (b) the seal is EXTENDED not weakened (realtruth json.dump only; symmetric static-import seal);
+(c) all signed solving contracts preserved; (d) scope == plan Sprint 3 ACs.
+```
