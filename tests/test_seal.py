@@ -173,3 +173,128 @@ def test_clean_fits_delivered_image_has_no_wcs_keywords(rendered):
         raw = header.tostring().upper()
         for kw in _WCS_KEYWORDS:
             assert kw not in raw, f"image.fits raw header contains WCS token {kw!r}"
+
+
+# === M1 SEAL EXTENSION: the second writer (ingest) + the repo-wide json.load guard ==============
+# M1 adds ingest, a SECOND writer of the sealed artifacts (real frames). It is seal-compatible iff:
+#   (a) ingest writes a WCS-FREE image.fits (clean-FITS seal, symmetric to render)  -> below;
+#   (b) ingest is structurally sealed away from truth like the solving modules
+#       (it never names/imports the truth reader)                                   -> below;
+#   (c) score remains the SOLE deserializer of truth: the json.load/json.loads token
+#       appears ONLY in score.py across all of src/ (ingest is a json.dump writer)  -> below.
+
+
+def _ingest_clean_image(tmp_path) -> Path:
+    """Run ingest on a tiny unsigned-16 FITS carrying a (bogus) source WCS, returning the path to the
+    WCS-stripped image.fits ingest wrote. The source WCS proves ingest STRIPS it, not merely that the
+    source happened to be clean."""
+    import numpy as np
+
+    from tracklet.ingest import ingest_external_image
+
+    src = np.array([[1, 2], [3, 4]], dtype=np.uint16)
+    raw = tmp_path / "src.fits"
+    hdu = fits.PrimaryHDU(data=src)
+    for k, v in {
+        "CTYPE1": "RA---TAN", "CTYPE2": "DEC--TAN",
+        "CRVAL1": 303.6, "CRVAL2": -16.2, "CRPIX1": 1.0, "CRPIX2": 1.0,
+        "CD1_1": -1e-4, "CD2_2": 1e-4,
+    }.items():
+        hdu.header[k] = v
+    hdu.writeto(raw, overwrite=True)
+
+    meta = {"frame": {"science_hdu": 0}, "solver": {"fov_deg": 3.41}}
+    result = ingest_external_image(str(raw), meta, str(tmp_path / "out"))
+    return result.image_path
+
+
+def test_clean_fits_ingest_image_has_no_wcs_keywords(tmp_path):
+    """Pillar 3 (clean-FITS), PARAMETRIZED OVER THE INGEST WRITER (AC 2.2): the image.fits ingest
+    writes for the real path carries NO WCS keywords — even when the SOURCE frame had a header WCS, the
+    normalized solver-facing output is WCS-stripped (the blind solve never reads back a header)."""
+    image_path = _ingest_clean_image(tmp_path)
+    with fits.open(image_path) as hdul:
+        header = hdul[0].header
+        keys = list(header.keys())
+        for kw in _WCS_KEYWORDS:
+            offenders = [k for k in keys if k.upper().startswith(kw)]
+            assert not offenders, f"ingest image.fits leaked WCS keyword(s) {offenders} (prefix {kw})"
+        raw = header.tostring().upper()
+        for kw in _WCS_KEYWORDS:
+            assert kw not in raw, f"ingest image.fits raw header contains WCS token {kw!r}"
+
+
+def test_static_solving_module_does_not_import_ingest():
+    """AC 2.3 — the forbidden-import list is EXTENDED over ingest: no solving module names or imports
+    ingest. ingest is a writer, not part of the solving path, so a solving module reaching it would be
+    a seal smell even though ingest itself reads no truth."""
+    for module in _SOLVING_MODULES:
+        imported = _imported_names(module)
+        for forbidden in ("ingest", "tracklet.ingest"):
+            assert not any(
+                name == forbidden or name.endswith("." + forbidden) for name in imported
+            ), f"{module.__name__} must not import {forbidden}: imports={imported}"
+        source = Path(module.__file__).read_text()
+        assert "ingest" not in source, f"{module.__name__} names 'ingest'"
+
+
+# --- The repo-wide json.load guard (AC 2.4) ----------------------------------------------------
+# score is the SOLE truth DESERIALIZER. We prove it across ALL of src/ by an AST scan for the
+# json.load / json.loads attribute-call token SPECIFICALLY — NOT a bare `load` substring, which would
+# false-positive on skyfield's load.timescale() (render.py) and astropy fits/Table reads. ingest uses
+# astropy + (in Sprint 3) json.dump, never json.load, so this guard catches a future regression that
+# tried to make ingest or report read truth.json directly.
+
+_SRC = _REPO / "src" / "tracklet"
+
+
+def _module_deserializes_json(tree: ast.AST) -> bool:
+    """True iff the module's AST contains a JSON deserialization call, ALIAS-RESISTANT:
+
+      * any ``<name>.load(...)`` / ``<name>.loads(...)`` where ``<name>`` is bound to the stdlib
+        ``json`` module (via ``import json`` OR ``import json as <name>``) — so an aliased
+        ``import json as _j; _j.loads(...)`` does NOT slip past; and
+      * a direct ``from json import load/loads`` bringing the deserializer into the namespace.
+
+    Crucially it does NOT match ``load.<attr>(...)`` where ``load`` is skyfield's loader
+    (``from skyfield.api import load`` -> ``load.timescale()``) or any astropy read — only names
+    actually bound to the ``json`` module count, so the legitimate non-truth reads never false-positive.
+    """
+    json_module_aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "json":
+                    json_module_aliases.add(alias.asname or "json")
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "json" and any(
+                a.name in ("load", "loads") for a in node.names
+            ):
+                return True  # `from json import load/loads` — the deserializer is in scope
+
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in ("load", "loads")
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in json_module_aliases
+        ):
+            return True
+    return False
+
+
+def _json_read_call_modules() -> list[str]:
+    """Every src/tracklet/*.py whose AST deserializes JSON (alias-resistant; see helper)."""
+    return [py.name for py in sorted(_SRC.glob("*.py")) if _module_deserializes_json(ast.parse(py.read_text()))]
+
+
+def test_json_load_only_in_score_across_src():
+    """AC 2.4 — the ``json.load``/``json.loads`` token appears in EXACTLY one module across src/:
+    score.py (the sole truth reader). Any other module deserializing JSON-truth would break the
+    non-circularity seal. Matched at the AST level (attribute call ``json.load``/``json.loads``), so
+    skyfield ``load.timescale()`` and astropy reads do not false-positive."""
+    offenders = _json_read_call_modules()
+    assert offenders == ["score.py"], (
+        f"json.load/json.loads must appear only in score.py across src/; found in {offenders}"
+    )

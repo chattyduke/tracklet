@@ -10,8 +10,9 @@ render is the KEYSTONE of the pipeline and the FIRST + SOLE writer of sealed tru
 The load-bearing seal (built to from the first commit, formally tested in S7):
   * ``image.fits`` is written WITHOUT any WCS header keywords (CRVAL/CD*/CTYPE/CRPIX/CDELT/PC*).
     The plate-solver must recover the pointing blindly — it never reads back a header we wrote.
-  * ``render`` is the SOLE writer of ``truth.json``. No other module in the repo writes it; only
-    ``score._load_truth`` reads it. The three solving modules never see a truth path.
+  * ``render`` writes ``truth.json`` for the synthetic path. (M1 adds a SECOND writer, ``ingest``,
+    for real frames; both produce the same sealed artifacts.) Only ``score._load_truth`` READS it —
+    that sole-reader property is the seal, and the three solving modules never see a truth path.
 
 Conventions (each pinned by a unit test in tests/test_render.py):
   * Synthetic ``RA---TAN`` / ``DEC--TAN`` WCS, ``crpix`` at the frame center (FITS 1-based),
@@ -268,6 +269,32 @@ def _add_noise(signal: np.ndarray, scene) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
+# Clean WCS-free FITS write (shared by render AND ingest — the M1 second writer)
+# ---------------------------------------------------------------------------
+
+
+def write_clean_fits(data: np.ndarray, path, provenance: dict | None = None):
+    """Write ``data`` to ``path`` as a CLEAN, WCS-FREE FITS (the load-bearing seal).
+
+    The delivered solver-facing image carries NO WCS header keywords (no CRVAL/CD*/CTYPE/CRPIX/
+    CDELT/PC*) — the plate-solver must recover pointing blindly, never reading back a header a
+    writer put there. ``provenance`` is an optional mapping of non-WCS header cards (e.g. ``BUNIT``,
+    ``TELESCOP``); each value may be a bare value or a ``(value, comment)`` tuple. This is a pure,
+    behavior-preserving extraction of render's original ``image.fits`` write (render.py:351-356), now
+    shared by ``ingest`` (the M1 real-frame writer) so neither writer reinvents the clean-FITS seal.
+
+    Returns the ``Path`` written.
+    """
+    path = Path(path)
+    hdu = fits.PrimaryHDU(data=data)
+    if provenance:
+        for key, val in provenance.items():
+            hdu.header[key] = val
+    hdu.writeto(path, overwrite=True)
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Sealed truth
 # ---------------------------------------------------------------------------
 
@@ -348,12 +375,16 @@ def render_scene(scene, catalogue, tle, out_dir) -> RenderResult:
     image = np.ascontiguousarray(image.astype(np.float32))
 
     # --- write image.fits CLEAN: data only, NO WCS header keywords (the load-bearing seal) ------
-    image_path = out_dir / "image.fits"
-    hdu = fits.PrimaryHDU(data=image)
-    # A minimal, WCS-free provenance note. Deliberately NO CRVAL/CD*/CTYPE/CRPIX/CDELT/PC*.
-    hdu.header["BUNIT"] = ("electron", "approx detector electrons (synthetic)")
-    hdu.header["TELESCOP"] = ("tracklet-synthetic", "synthetic-from-real-data scene")
-    hdu.writeto(image_path, overwrite=True)
+    # Via the shared write_clean_fits helper (also used by ingest, the M1 real-frame writer) so the
+    # clean-FITS seal is implemented in ONE place. Deliberately NO CRVAL/CD*/CTYPE/CRPIX/CDELT/PC*.
+    image_path = write_clean_fits(
+        image,
+        out_dir / "image.fits",
+        provenance={
+            "BUNIT": ("electron", "approx detector electrons (synthetic)"),
+            "TELESCOP": ("tracklet-synthetic", "synthetic-from-real-data scene"),
+        },
+    )
 
     # --- write truth.json SEALED: render is the SOLE writer -------------------------------------
     # Stamp the catalogue by its committed fixture FILENAME (not an absolute path) so truth.json
