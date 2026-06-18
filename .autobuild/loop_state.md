@@ -101,7 +101,7 @@ next_action: >-
   LOCAL/FREE (/code-review ultra BANNED); NEVER auto-push (v0.1.1 LOCAL only); NEVER write a handoff file. Carry the
   2 M1 watch-items (open_findings note above).
 human_gate: false  # CLEARED this turn — the TLE WATCH-ITEM that raised it at tick-20 is RESOLVED: a public, no-credential historical NORAD-53807 TLE (epoch 22321.51776124 = 2022-11-17T12:25:34.6 UTC, 0.598 d pre-exposure, checksum-valid, independently corroborated) is recorded in next_action's ✅ TLE RESOLVED block. No Space-Track creds needed. The Sprint-1 BUILD proceeds frame + TLE in hand.
-tick_lock: null  # cleared at tick-20 end (BUILD halted at the TLE Andon; the empty feat/m1-s1-real-frame branch — 0 commits — was deleted; no live build in progress)
+tick_lock: "tick-21 M1-Sprint-1 BUILD (frame+TLE in hand); branch feat/m1-s1-real-frame"  # set at tick-21 begin: TLE independently re-verified (checksums L1=3/L2=5 OK, epoch 22321.51776124 = 2022-11-17T12:25:34Z = 0.598d pre-exposure, orbit i=53.2°/mm=15.186 → ~510 km LEO BW3-consistent); baseline GREEN 103+5; building the Sprint-1 fixtures + live smoke.
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
