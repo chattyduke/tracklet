@@ -127,7 +127,7 @@ next_action: >-
   residual PASSING AC-4.6 + README + tag v0.1.1 LOCAL. GENBA each tick: clean tree, only loop-authored commits since
   last_green, re-hash plan 955c27e3, baseline green.
 human_gate: false  # Sprint-2 merged green; no Andon halt. The AC-1.5 frame-confirmation human gate was already cleared by Sam (tick 19/20, recorded in PROVENANCE.md). NOT a hard human stop this tick. BUT a real-world CARRIED ITEM is surfaced to Sam in needs_human: AC 2.5 (the binding @solver Sprint-1 confirmation) could not run — the 2.4GB Zenodo frame exceeded the 600s fetch window — so it must be executed against the real frame at the next @solver window before the Sprint-1 lock is fully confirmed. Sprint 3 (non-solver) can proceed first.
-tick_lock: null  # cleared at tick-22 end (Sprint-2 BUILD complete + merged green; feat/m1-s2-ingest deleted post-merge; no live build in progress)
+tick_lock: "tick-23 BUILD live (M1 Sprint 3 real-truth) — feat/m1-s3-realtruth; began after GENBA gates PASS (clean tree @ dc4247d, plan SHA 955c27e3 matches, baseline 121 non-solver + 5 @solver green, no_progress 0). Sprint 3 HIGH-RISK (render-helper extraction + real satellite-truth assembly) → mandatory 2nd independent LOCAL review."
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
