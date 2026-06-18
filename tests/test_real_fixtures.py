@@ -14,6 +14,8 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import pytest
+
 from tracklet import scene
 
 REPO = Path(__file__).resolve().parent.parent
@@ -69,14 +71,19 @@ def test_meta_toml_parses_with_verified_header_values():
     assert (REAL / meta["satellite"]["tle_file"]).is_file()
 
 
-def test_meta_observatory_site_present_and_flagged_for_confirmation():
+def test_meta_observatory_site_confirmed_to_published_oan_spm():
     meta = tomllib.loads((REAL / "meta.toml").read_text())
     obs = meta["observatory"]
     assert -90 <= obs["lat_deg"] <= 90
     assert -180 <= obs["lon_deg"] <= 180
     assert obs["elev_m"] > 0
-    # The exact DDOTI station coords are a Sprint-3 confirmation item (LEO parallax is material).
-    assert obs["site_confirmed"] is False
+    # Sprint 3 (AC 3.2) CONFIRMED the site to the published OAN-SPM position (airmass.org /
+    # OAN-UNAM); DDOTI sits on the OAN-SPM site. LEO parallax is material, so the value is pinned to
+    # source — a future drift or un-confirmation must trip this guard.
+    assert obs["site_confirmed"] is True
+    assert obs["lat_deg"] == pytest.approx(31.044333, abs=1e-6)
+    assert obs["lon_deg"] == pytest.approx(-115.46375, abs=1e-6)
+    assert obs["elev_m"] == pytest.approx(2830.0, abs=1.0)
 
 
 # ---------------------------------------------------------------------------
