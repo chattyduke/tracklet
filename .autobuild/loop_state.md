@@ -1,32 +1,49 @@
 ---
 current_milestone: M1
-current_increment: "M1 real-image stretch (plan Sprint 8) — run the full pipeline on a GENUINE telescope/all-sky frame; SEPARATE milestone, optional human-approval andon gate per config"
+current_increment: "M1 Sprint 1 — acquire + smoke-verify + LOCK ONE real public-archive FITS (header WCS + precise UTC + externally-established NORAD id); HUMAN ANDON GATE before Sprint 2 (plan plan-the-m1-real-image-snappy-bunny.md, target tag v0.1.1)"
 last_increment_id: "S7 seal tests + golden e2e + README/docs — M0 COMPLETE, tagged v0.1.0"
-phase: HANSEI
-status: FRESH
+phase: PLAN
+status: PLAN_LOCKED_AWAITING_BUILD
 last_green_sha: d58f94f854d101cec414eb037866d07257c53293
 green_suites:
   - {cmd: 'pytest -m "not solver"', passed: 103, failed: 0, note: 'S7 added 8 seal tests (static x6 = 2 checks x 3 solving modules, runtime x1, clean-FITS x1); all 3 pillars mutation-verified RED then restored. Green WITHOUT the solver (AC 7.5). Run via `make test`.'}
   - {cmd: 'pytest -m solver', passed: 5, failed: 0, note: 'S3 x2 + S6 x2 + S7 golden-e2e x1. Golden e2e (THE DoD gate) blind-solve residual = 2.081" (< 10" gate; expected ~2-4"; < 5" stretch), actual number always reported via capsys.disabled(). Independently re-rendered+re-solved in REVIEW. Run via `make test-golden`.'}
-plan_file: ~/.claude/plans/lucky-dazzling-parasol.md
-plan_sha256: d7237cddd2363b869e3d888dfafc801932db3923adf924a37b86addba9f73f07
+plan_file: ~/.claude/plans/plan-the-m1-real-image-snappy-bunny.md
+plan_sha256: 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed
 no_progress_count: 0
-open_findings: []  # S7 review @ tick 17 = ACCEPT (NO blocker/major/minor). 2 NITs, both dispositioned no-change: (NIT-1) golden-e2e overlaps test_run AC 6.1 — deliberate (CLI/artifact path vs function-level DoD gate against the imported RESIDUAL_THRESHOLD_ARCSEC); (NIT-2) the runtime seal pillar omits solve_pointing + uses the true WCS — documented seam, solve_pointing's runtime truth-independence is covered by the static pillar (subprocess-driven, imports no truth loader) + the @solver golden e2e. The S5-carried 1-px-convention item is now CLOSED (discharged in S7 — see post-S7 note).
+open_findings: []  # M1 starts clean (M0 closed at tick 17, ACCEPT). CARRIED M1 watch-items (NOT blocking; only bite once a REAL frame is processed): (1) detect_streak's transverse 1D-Gaussian refinement can mis-fit on a SATURATED/WIDE streak whose Canny edges exceed the 8px merge tol -> midpoint bias (S4 review) — watch midpoint robustness on the real frame; (2) [benign] _MIN_STREAK_SPAN_PX=100 floor unreachable given _HOUGH_MIN_LINE_LENGTH=150 (S4 NIT).
 next_action: >-
-  M0 IS COMPLETE (tagged v0.1.0 @ d58f94f). The next tick is a FRESH planning tick for milestone M1 — a SEPARATE
-  milestone and a SEPARATE tick. RUN IN A FRESH /autobuild-loop SESSION (the engine is fresh-context per tick; it
-  reconstructs state from this file at the top of GENBA). Per §3.2 a FRESH tick runs GENBA -> RESEARCH -> IDEATE ->
-  PLAN and HARD-STOPS at the plan lock — the M1 BUILD is the tick after that. ⚠️ M1 carries an OPTIONAL
-  HUMAN-APPROVAL ANDON GATE (config milestone M1): M1 runs the full pipeline on a GENUINE telescope/all-sky image
-  (NOT synthetic), so before planning the M1 build, surface to the human that real-image work is starting and
-  confirm the intended target frame + its truth source (a real satellite's known TLE for that epoch). Do NOT push
-  (human-gated) — pushing ~/tracklet remains the human's call; M0's v0.1.0 tag is LOCAL only.
-  M1 contract (plan Sprint 8, lines ~281-284): reuse the SAME solve->detect->measure->score->report on ONE real
-  public satellite image, with its own truth (the known TLE for that epoch); report HONEST degradation (real
-  timing offsets, real noise, no clean injected truth). The core (M0) already ships + tests standalone — M1 is an
-  independently-shippable stretch, NOT a change to the committed core. GENBA gates as usual: clean tree, only
-  loop-authored commits since last_green_sha d58f94f, re-hash plan (d7237cdd…), baseline 103 non-solver + 5 @solver
-  green, then (after the human-approval andon) plan M1. Carry the two M1 watch-items in the post-S7 note below.
+  M1 plan LOCKED this tick (tick 18, FRESH planning tick): plan_file repointed to
+  plan-the-m1-real-image-snappy-bunny.md (SHA 955c27e3…); config.approved_plan_path repointed to match. Per §3.2
+  this FRESH tick HARD-STOPS at the plan lock — the Sprint-1 BUILD is the NEXT tick (run a fresh /autobuild-loop
+  session on ~/tracklet; the engine reconstructs state from this file at the top of GENBA).
+  ⚠️ SPRINT 1 CARRIES THE M1 HUMAN ANDON GATE — the ONE hard stop. The build tick: source ONE public-archive FITS
+  (header WCS + precise UTC DATE-OBS/EXPTIME + a satellite trail whose NORAD id is EXTERNALLY established; priority
+  NOIRLab Astro Data Archive -> ZTF/IRSA -> SDSS); smoke-verify it blind-SOLVES + DETECTS on the RAW candidate
+  (AC 1.2/1.3, reuse solve_pointing/detect_streak verbatim); write tests/fixtures/real/PROVENANCE.md + a fetch.sh
+  (pinned SHA256, TWO urls: primary + mirror) + commit the TLE; THEN raise human_gate=true and HALT — Sam must
+  confirm the exact frame + NORAD id + provenance (AC 1.5) before Sprint 2. The Sprint-1 lock is PROVISIONAL:
+  Sprint 2's AC 2.5 (the NORMALIZED / WCS-stripped image still blind-solves + detects) is the BINDING confirmation;
+  if AC 2.5 fails, REJECT the frame and return to Sprint 1 for the next candidate.
+  GENBA gates as usual: clean tree, only loop-authored commits since last_green_sha d58f94f, re-hash plan
+  (955c27e3…), baseline 103 non-solver + 5 @solver green.
+  NON-NEGOTIABLE INVARIANTS (every M1 sprint): (a) SEALED-TRUTH SEAL — json.load appears ONLY in score.py;
+  solve_pointing/detect_streak/measure_position never read truth and never take a header WCS; the solver ALWAYS
+  gets a WCS-stripped image; the NEW ingest writer is covered by the EXTENDED seal tests; when extending the
+  "json.load only in score.py" test, match the AST json.load/json.loads attribute-call token SPECIFICALLY, NOT a
+  bare `load` substring (else it false-positives on skyfield load.timescale() at render.py:138 + astropy reads) —
+  do NOT weaken the seal to make a bad test pass. (b) NON-CIRCULARITY — header WCS is pointing-truth, read ONLY by
+  ingest + the report diagnostic, passed IN-MEMORY (never json.load outside score.py); satellite-truth = the TLE
+  propagated via skyfield TOPOCENTRIC (observatory site honored — mandatory for LEO parallax) to the exposure
+  midpoint -> truth.json["scored_truth"], read by score._load_truth UNCHANGED; NEVER feed the header WCS into the
+  solver. (c) HONEST TYPED FAILURE — SolveFailure/DetectFailure -> exit 2/3 + labelled msg + NO residual.txt; a
+  wrong-field lock failing the AC-4.6 plausibility gate (recovered WCS center vs header WCS center <= 0.5 x fov_deg)
+  is ALSO an honest typed failure, not a flattering residual; a NUMERIC residual PASSING AC-4.6 is REQUIRED before
+  tagging v0.1.1 (a typed failure means "pick another frame," not "done"). (d) REUSE — factor & reuse render's
+  _propagate_satellite + clean-FITS write as BEHAVIOR-PRESERVING extractions (render's tests + golden e2e stay
+  green); reuse solve/detect/score verbatim. (e) YAGNI — no non-FITS ingest, no streak-vs-catalogue matcher
+  (PHASE 2, scoped-only). (f) ALL review LOCAL/FREE (/code-review ultra BANNED for tracklet); NEVER auto-push
+  (v0.1.1 is LOCAL only); NEVER write a handoff file. Carry the 2 M1 watch-items (open_findings note above).
 human_gate: false
 tick_lock: null
 
@@ -545,3 +562,47 @@ JUDGE: N/A — brief brief (Sprint 7 fully specified; no design fork).
 - [tick 17 | REVIEW] Thought: S7 HIGH-RISK (completes M0 + formally touches the seal) → MANDATORY 2nd independent LOCAL adversarial review (cost guard: local only, /code-review ultra BANNED). → Action(spawn fresh-context general-purpose adversarial reviewer over git diff main..feat/S7 with a brief demanding independent re-render+re-solve, independent mutation of all seal pillars + the convention, AC-by-AC verification; reviewer must leave the tree clean) → Observation: VERDICT ACCEPT (no blocker/major/minor; 2 NITs). Reviewer INDEPENDENTLY: ran the blind pipeline → residual 2.0815" reproduced; proved non-circularity (recovered WCS crval ≠ true by ~0.35°; through-true-WCS residual 1.60" vs through-recovered 2.08"; image.fits WCS-free; measure uses recovered WCS); re-ran all mutation probes RED; mutated CD1_1-sign + CRPIX-1px → confirmed the cited deterministic round-trip tests fail without the solver (CARRIED item genuinely discharged); json.load( only in score.py; signatures unchanged. Tree left clean.
 - [tick 17 | INTEGRATE] Thought: gate passed (ACCEPT + both NITs dispositioned no-change + both suites green + documented `make test`/`make test-golden` reproduce verified). S7 DoD COMPLETES M0 → merge + tag. → Action(run `make test` (103) + `make test-golden` (5); git merge --no-ff feat/S7 → main; full suite on main; git tag -a v0.1.0; git branch -d feat/S7) → Observation: merged @ d58f94f; 103 non-solver + 5 @solver green on main; v0.1.0 tagged (LOCAL only — NOT pushed, human-gated); feat/S7 deleted; only main remains. M0 COMPLETE. no_progress_count stays 0 (green merge).
 - [tick 17 | HANSEI] What worked: building the seal gate DIRECTLY in the parent (not via a spawned Generator) was the right call for load-bearing seal work — full control over the non-circularity logic — and the mutation-verification discipline (neuter each seal → confirm RED → restore) turned three otherwise-tautological guard tests into honest ones, which the adversarial reviewer then independently re-confirmed by its OWN mutations. The CARRIED 1-px-convention item resolved cleanly via the offered Option A: the convention is ALREADY pinned by deterministic, solver-free round-trip tests, so adding a hard <5" gate would have introduced stranger-flake risk the plan deliberately designed the 10" gate to avoid — Option A is the stronger engineering choice, and the reviewer proved it (CD-sign/CRPIX mutations fail the round-trip tests deterministically). Genchi-genbutsu: running `make run`/`make test-golden` myself + the reviewer's independent re-solve (not trusting the build narrative) is what confirmed the 2.08" is a real, non-circular number. Surprise/Muda avoided: nearly all of S7's "deliverables" (LICENSE, requirements.lock, most of the README, the per-module seals) were ALREADY done in earlier sprints — the genba walk prevented re-building them; S7's true delta was the formal seal consolidation + the golden gate + a stale-status README fix. KAIZEN (M1): M1 is a SEPARATE milestone (real image) with an optional human-approval andon gate — the next tick is a FRESH planning tick that must FIRST surface real-image scope to the human (target frame + its real-TLE truth source) before planning; carry the detect_streak saturated/wide-streak watch-item (#1) into the real-image build. Anti-spin: green merge → no_progress 0. Per §3.2 + the HARD-STOP: this BUILD tick ENDS here; M1 does NOT begin now.
+
+- [tick 18 | GENBA] Thought: status FRESH for M1; per §3.2 a FRESH planning tick (GENBA→RESEARCH→IDEATE→PLAN, HARD-STOP at the plan lock — the M1 BUILD is the NEXT tick). Driven by an operator brief naming a SEPARATE, human-signed M1 contract (plan-the-m1-real-image-snappy-bunny.md) — distinct from the M0 plan the config/state still pointed at. Verify §3.5 gates + no live session + baseline + the M1 plan before locking. → Action(list_sessions isRunning check; git status/log/HEAD/tags/branches; shasum both plans; `make test` + `make test-golden` via repo .venv) → Observation: NO live tracklet build loop (the 2 isRunning sessions are space-research chats; every Tracklet-* build session stopped; tick_lock null). Clean tree on main @ 52c00e5 (tick-17 bookkeeping chore, 1 ahead of tag v0.1.0 @ d58f94f — loop-authored, no drift). M0 plan re-hash = d7237cdd… (matches recorded — state internally consistent, just pointed at the COMPLETED M0 plan). M1 plan present (24023 B, SHA 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed). Baseline GREEN: 103 non-solver + 5 @solver (golden e2e blind residual 2.081"). Perth 15:51.
+- [tick 18 | RESEARCH] Thought: the M1 plan is a fully-specified, human-signed /ultraplan output (non-circularity architecture, 6 sprints, signed ACs, reuse map all settled). The only genuine external unknown — WHICH real public FITS frame — is Sprint-1 BUILD acquisition work (priority archives already named: NOIRLab Astro Data Archive → ZTF/IRSA → SDSS), NOT planning research, and it is gated by the human andon. → Action(none — JIT SKIP) → Observation: research SKIPPED (the plan settles HOW; frame sourcing is the Sprint-1 build).
+- [tick 18 | IDEATE] Thought: the M1 plan fully specifies the design (two independent truths kept out of the solving path; ingest as render's symmetric WRITER; behavior-preserving render extractions; additive report widening; extended seal tests). No design fork → SKIP heavy ideation (Muda). → Action(emit trivial design brief, below) → Observation: brief recorded; Pre-Mortem clear — (a) reuses render's propagation + clean-FITS write (re-invents nothing); (b) the seal is PRESERVED + EXTENDED (score stays the sole json.load reader; ingest is a second WRITER, not a reader; the solver gets a WCS-stripped image); (c) no solving-module contract change (render gets behavior-preserving extractions; report widens additively + downstream of score); (d) scope == the M1 plan verbatim — PHASE 2 (harvester + truth-correlator) explicitly NOT built.
+- [tick 18 | PLAN] Thought: JIT — M1 fully covered by the approved, human-signed plan-the-m1-real-image-snappy-bunny.md; skip /ultraplan, consume it, record path + SHA so the BUILD tick's §4-#3 stale-plan gate applies to the RIGHT plan. The milestone advanced M0→M1, so the binding plan changes: repoint BOTH config.approved_plan_path AND loop_state.plan_file/plan_sha256 to the M1 plan (Konnyaku/Nemawashi — leaving config pointed at the COMPLETED M0 plan would mis-point the next tick; surfaced to Sam this tick). → Action(repoint config.approved_plan_path → plan-the-m1-real-image-snappy-bunny.md + correct the M1-dod "(plan S8)" stale pointer; set loop_state plan_file/plan_sha256 = 955c27e3…, status PLAN_LOCKED_AWAITING_BUILD, phase PLAN; write the Sprint-1 BUILD next_action incl. the human andon gate + the M1 invariant core; commit the loop-authored chore on main) → Observation: plan_sha256 = 955c27e35f9ea3627d3edbf6f276105b5d9b1d82b34e0e3d12543062d9b5a2ed; config + state repointed; status PLAN_LOCKED_AWAITING_BUILD. Per §3.2 this FRESH tick HARD-STOPS at the plan lock — the Sprint-1 BUILD (acquisition + human andon gate) is the NEXT tick, launched by a human in a fresh /autobuild-loop session. no_progress_count stays 0 (plan-lock = progress, §3.3).
+
+### increment design brief (tick 18)
+
+```
+M1 Sprint 1 — acquire + smoke-verify + LOCK the real frame (HUMAN ANDON GATE). Build EXACTLY Sprint 1 of the
+approved plan (plan-the-m1-real-image-snappy-bunny.md), no more, no less.
+
+SCOPE (JIT — Sprint 1 verbatim): source ONE public-archive FITS carrying a header WCS + precise UTC
+(DATE-OBS/EXPTIME) + a satellite trail whose NORAD id is EXTERNALLY established (priority NOIRLab Astro Data
+Archive → ZTF/IRSA → SDSS). Smoke-verify it blind-SOLVES + DETECTS on the RAW candidate (solve_pointing +
+detect_streak, path-based, reused VERBATIM — solve-field solves blind by default even with a header WCS present).
+Write tests/fixtures/real/PROVENANCE.md (source URL, exact retrieval steps, DATE-OBS/EXPTIME, NORAD id + TLE epoch
++ source, observatory site, header-WCS presence). DEFAULT to a fetch.sh that downloads the frame + verifies a
+pinned SHA256 with TWO URLs (primary archive + a documented mirror); inline-commit the FITS ONLY if small
+(≤~5 MB) AND license permits (a multi-MB binary in non-LFS git history is one-way bloat). Commit the TLE (as M0
+commits the ISS TLE).
+
+HARD STOP — Sam confirms the exact frame + NORAD id + provenance (AC 1.5) before Sprint 2. The lock is PROVISIONAL:
+AC 1.2/1.3 solve+detect the RAW candidate, which does NOT guarantee the NORMALIZED image still solves — Sprint 2's
+AC 2.5 is the binding confirmation; if AC 2.5 fails, REJECT the frame and return here for the next candidate.
+
+TOUCHED: tests/fixtures/real/ (PROVENANCE.md + fetch.sh + TLE + meta.toml) + a documented smoke. NO product-module
+code in Sprint 1 — the 7 solving/pipeline modules are UNTOUCHED; Sprint 1 only ADDS fixtures + provenance and runs
+the EXISTING path-based solve/detect as a smoke. Sealed-truth + every signed contract preserved by construction.
+
+TEST ORACLE (Sprint-1 Green): documented smoke — solve_pointing(<raw candidate>, {"fov_deg": <hint>}) returns a
+SolveResult (not SolveFailure) AND detect_streak(<raw candidate>) returns a StreakDetection (not DetectFailure);
+`make test` still green (only docs/fixtures added); AC 1.1 retrieval stranger-reproducible (a fresh checkout
+obtains the byte-identical frame via committed inline OR fetch.sh SHA256 against the primary OR mirror url).
+
+YAGNI / OUT OF SCOPE: NO ingest module (Sprint 2), NO truth assembly (Sprint 3), NO run.py branch (Sprint 4),
+NO report (Sprint 5), NO non-FITS ingest, NO streak-vs-catalogue matcher (PHASE 2). Sprint 1 = acquire + smoke +
+provenance + the human andon ONLY.
+
+JUDGE: N/A — trivial design brief (Sprint 1 fully specified; no design fork). Pre-Mortem guard, all four clear:
+(a) re-invents nothing (reuses solve_pointing/detect_streak verbatim as a smoke); (b) sealed-truth untouched (no
+module built; the smoke runs the blind path on the raw frame); (c) shatters no signed contract (no module
+changed); (d) scope == Sprint 1 verbatim.
+```

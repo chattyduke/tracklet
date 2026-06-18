@@ -9,8 +9,10 @@ upgrade — see [[project_autobuild_loop]]). An absent or schema-invalid config 
 [project]
 name = "tracklet"
 repo_path = "/Users/samuelleishman/tracklet"
-# The human-approved /ultraplan build plan (absolute — it lives outside the repo, in the plan archive).
-approved_plan_path = "/Users/samuelleishman/.claude/plans/lucky-dazzling-parasol.md"
+# The human-approved /ultraplan build plan for the ACTIVE milestone (absolute — it lives outside the
+# repo, in the plan archive). Repointed M0->M1 on milestone transition (tick 18, 2026-06-18): M0 shipped
+# against lucky-dazzling-parasol.md (tag v0.1.0); M1 has its own dedicated, human-signed contract below.
+approved_plan_path = "/Users/samuelleishman/.claude/plans/plan-the-m1-real-image-snappy-bunny.md"
 
 [poka_yoke]
 # tracklet's sealed-truth / non-circularity invariant. render is the SOLE writer of truth.json;
@@ -32,7 +34,7 @@ dod = "synthetic-from-real-data pipeline green end-to-end (S0-S7): render -> bli
 
 [[milestones]]
 id = "M1"
-dod = "real image: run the full pipeline on a genuine telescope / all-sky frame (not synthetic) and recover a real satellite streak's RA/Dec with a reported residual — the M1 real-image stretch (plan S8), an optional human-approval andon gate applies"
+dod = "real image: run the full pipeline on a genuine telescope / all-sky frame (not synthetic) and recover a real satellite streak's RA/Dec with a reported residual — the M1 real-image stretch (see plan-the-m1-real-image-snappy-bunny.md, the dedicated M1 contract that supersedes the M0 plan's Sprint-8 sketch; target tag v0.1.1), a human-approval andon gate applies at Sprint 1 (confirm frame + NORAD id + provenance before Sprint 2)"
 
 [[milestones]]
 id = "M2"
