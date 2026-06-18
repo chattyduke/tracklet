@@ -66,7 +66,7 @@ next_action: >-
   detect → 4956px @126.16°; scored truth = (306.525,−14.889) @ midpoint 2022-11-18T02:47:21.782Z; MILESTONE residual
   = 315.5236″.
 human_gate: false  # Sprint-4 COMPLETE + merged GREEN; no Andon halt. AC-1.5 frame-confirmation gate already cleared by Sam (tick 19/20). The milestone NUMERIC RESIDUAL now EXISTS (315.52″) — honest, non-circular, plausibility-gated. No human decision required to continue: the next BUILD tick is Sprint 5 (degradation report), then Sprint 6 (README + tag v0.1.1 LOCAL). Surfaced to Sam in needs_human as informational: the headline real-image residual is in hand; v0.1.1 is ~2 sprints out.
-tick_lock: null  # cleared at tick-25 end (Sprint-4 COMPLETE — AC 4.1 milestone residual 315.52″ built + merged green @ 4174963; feat/m1-s4-offset deleted post-merge; offset frames fetched + gitignored; tree clean; no live build in progress).
+tick_lock: "tick-26 LIVE — M1 Sprint 5 (honest five-source degradation report) on feat/m1-s5-degradation-report; begin-marker on main; build in progress."
 
 # --- post-S7-build note / M0 COMPLETE (read before the M1 FRESH planning tick's §3.5 gate) ---
 # S7 (the FINAL M0 sprint) BUILT + REVIEWED (mandatory 2nd independent LOCAL adversarial pass — high-risk: closes
