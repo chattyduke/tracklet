@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: applied  # 2026-06-20 — added [artifacts] convention (run-output dirs + large-generated globs + BUILD-phase add-ignore-AND-verify-it-fires Poka-Yoke) to .autobuild/config.md; config gate PASSED (config.load_config dry-run validates); invariant-core SHA unchanged.
 target: project-config
 pathology_class: constituent-skill
 key: generated-output-gitignore-verify-pokayoke
