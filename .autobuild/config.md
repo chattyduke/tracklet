@@ -75,4 +75,11 @@ commands = ["pytest -m \"not solver\"", "pytest -m solver"]
 run_output_dirs = ["out/", "out_real/"]
 large_generated_globs = ["*.fits", "*.fits.fz"]
 build_phase_pokayoke = "When a tick introduces a NEW generated-output path, add the .gitignore rule AND verify it fires (git check-ignore <path>, or touch-and-check that the file reads as ignored) BEFORE commit — an ignore rule that does not actually match is worse than none."
+
+# Applied from card 2026-06-19-large-artifact-stream-extract-pokayoke (project-config; config gate:
+# schema-valid dry-run). The durable fetch rule the loop paid three ticks (22/24/25) to learn. Strengthens
+# the SHA-pin / byte-identical-reproduce discipline; touches no safety rail.
+[acquisition]
+large_remote_archive_rule = "When sourcing data from a large remote archive, NEVER download the whole archive to disk. Stream and extract only the needed member(s) (tar -xzO / HTTP range-read); pin and verify a per-member SHA256; pay any deep-archive seek ONCE via a single-pass multi-member extraction — NOT parallel range-reads (they stalled at 0 bytes), NOT per-member serial re-seeks (~25 min each)."
+member_size_hint = "DDOTI FITS member ~17.5 MB; the whole Zenodo archive (~2.4 GB) must never hit the working tree."
 ```

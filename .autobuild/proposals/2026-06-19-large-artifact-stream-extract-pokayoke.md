@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: applied  # 2026-06-20 — added [acquisition] convention (stream-extract-and-verify rule + member-size hint) to .autobuild/config.md; config gate PASSED (config.load_config dry-run validates); invariant-core SHA unchanged.
 target: project-config
 pathology_class: constituent-skill
 key: large-artifact-stream-extract-pokayoke
