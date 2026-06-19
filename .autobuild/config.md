@@ -91,4 +91,13 @@ member_size_hint = "DDOTI FITS member ~17.5 MB; the whole Zenodo archive (~2.4 G
 [seal_notes]
 no_header_wcs_offset_pattern = "When a real frame lacks a header WCS, derive the per-camera pointing offset EMPIRICALLY from >=3 OTHER frames of the SAME camera/instrument (mean recovered-minus-commanded, report the scatter) — NEVER from the target frame's own recovered-minus-commanded. The field-lock gate then checks blind-recovered-plus-offset against the commanded pointing within the half-field tolerance."
 non_circularity_witness = "MANDATORY acceptance check: the committed offset must differ MEASURABLY from the target frame's own recovered-minus-commanded delta (M1: ~0.7 arcsec distinct) — this proves the offset was not laundered from the target itself."
+
+# Applied from card 2026-06-19-real-frame-acquisition-checklist (project-config; config gate:
+# schema-valid dry-run). Surfaces the four real-frame prerequisites at PLAN time so frame+TLE acquisition
+# is an explicit human-gated precondition, not a mid-BUILD surprise (M1 burned two andon halts, ticks 19/20).
+# Documentation-only; REINFORCES (never relaxes) the non-circularity / no-correlator rail (identity must be
+# EXTERNAL, never loop-derived). Applies to M1 and any future real-data milestone.
+[real_frame_acquisition]
+checklist = "BEFORE a real-image sprint starts, ONE downloadable frame must carry ALL FOUR: (a) retrievable FITS (byte-identical via SHA-pinned stream); (b) a pointing reference (header WCS OR documented commanded-pointing + empirical camera offset, see [seal_notes]); (c) precise UTC (DATE-OBS start + EXPTIME); (d) an EXTERNALLY-established NORAD identity (dataset-carried, NOT loop-correlated)."
+structural_blocker = "FITS-publishers and identity-publishers are largely DISJOINT corpora (datasets ship FITS without NORAD identity; identity papers ship no retrievable FITS+WCS+UTC), and historical TLE-by-date requires a credentialed Space-Track pull (CelesTrak gp-history 404s for the public). Treat frame + historical-TLE acquisition as a human-gated prerequisite raised at PLAN time."
 ```

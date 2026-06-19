@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: applied  # 2026-06-20 — added [real_frame_acquisition] (four-property prerequisite checklist + structural-blocker note) to .autobuild/config.md; config gate PASSED (config.load_config dry-run validates); invariant-core SHA unchanged.
 target: project-config
 pathology_class: constituent-skill
 key: real-frame-acquisition-checklist
