@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: applied  # 2026-06-20 — added [seal_notes] (non-circular empirical camera-offset pattern + mandatory distinctness witness) to .autobuild/config.md; config gate PASSED (config.load_config dry-run validates); invariant-core SHA unchanged.
 target: project-config
 pathology_class: constituent-skill
 key: no-header-wcs-empirical-offset-pattern

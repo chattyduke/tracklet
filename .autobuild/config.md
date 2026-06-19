@@ -82,4 +82,13 @@ build_phase_pokayoke = "When a tick introduces a NEW generated-output path, add 
 [acquisition]
 large_remote_archive_rule = "When sourcing data from a large remote archive, NEVER download the whole archive to disk. Stream and extract only the needed member(s) (tar -xzO / HTTP range-read); pin and verify a per-member SHA256; pay any deep-archive seek ONCE via a single-pass multi-member extraction — NOT parallel range-reads (they stalled at 0 bytes), NOT per-member serial re-seeks (~25 min each)."
 member_size_hint = "DDOTI FITS member ~17.5 MB; the whole Zenodo archive (~2.4 GB) must never hit the working tree."
+
+# Applied from card 2026-06-19-no-header-wcs-empirical-offset-pattern (project-config; config gate:
+# schema-valid dry-run). Codifies and STRENGTHENS the non-circularity rail (the seal): the no-header-WCS
+# field-lock fallback derives the camera offset from OTHER frames + requires a measurable-distinctness
+# witness. Does NOT touch the [poka_yoke].seal rail; the AC-4.6 tolerance is unchanged (realgate.py
+# byte-identical per the tick-25 review).
+[seal_notes]
+no_header_wcs_offset_pattern = "When a real frame lacks a header WCS, derive the per-camera pointing offset EMPIRICALLY from >=3 OTHER frames of the SAME camera/instrument (mean recovered-minus-commanded, report the scatter) — NEVER from the target frame's own recovered-minus-commanded. The field-lock gate then checks blind-recovered-plus-offset against the commanded pointing within the half-field tolerance."
+non_circularity_witness = "MANDATORY acceptance check: the committed offset must differ MEASURABLY from the target frame's own recovered-minus-commanded delta (M1: ~0.7 arcsec distinct) — this proves the offset was not laundered from the target itself."
 ```
