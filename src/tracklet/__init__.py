@@ -4,4 +4,4 @@ Pipeline: scene -> render -> [solve_pointing, detect_streak] -> measure_position
 See README.md for what this proves and what it does not.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"

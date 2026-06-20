@@ -1,5 +1,5 @@
 # tracklet — one-command interface (see README for the reproduce recipe)
-.PHONY: setup fetch run test test-golden clean
+.PHONY: setup fetch run test test-golden build clean
 
 VENV ?= .venv
 PY   := $(VENV)/bin/python
@@ -29,5 +29,11 @@ test:
 test-golden:
 	$(PY) -m pytest -m solver -q
 
+# Build the wheel + sdist offline (no PyPI build-isolation; reuses the dev-extra build backend).
+# Run `make setup` first so build/setuptools/wheel are present in the venv.
+build:
+	$(PY) -m build --no-isolation
+
 clean:
 	rm -rf out/*.fits out/*.png out/*.md out/residual.txt
+	rm -rf dist/ build/
