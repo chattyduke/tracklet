@@ -253,6 +253,25 @@ def test_static_solving_module_does_not_import_realtruth():
         assert "realtruth" not in source, f"{module.__name__} names 'realtruth'"
 
 
+def test_static_solving_module_does_not_import_tdm():
+    """M2 Sprint 2 (AC 2.4) — the forbidden-import list is EXTENDED over the CCSDS TDM writer, tdm (a
+    pure downstream-of-score artifact writer, symmetric to report). No solving module names or imports
+    tdm. tdm is a DOWNSTREAM WRITER (text-formats the measured RA/Dec + epoch; never deserializes
+    truth — auto-covered by the repo-wide json.load guard); a solving module reaching it would be a
+    seal smell — the solving leaves must stay structurally isolated from every output writer.
+
+    This guard BITES: adding ``import tracklet.tdm`` (or naming ``tdm`` in source) inside any of
+    solve_pointing / detect_streak / measure_position fails it immediately."""
+    for module in _SOLVING_MODULES:
+        imported = _imported_names(module)
+        for forbidden in ("tdm", "tracklet.tdm"):
+            assert not any(
+                name == forbidden or name.endswith("." + forbidden) for name in imported
+            ), f"{module.__name__} must not import {forbidden}: imports={imported}"
+        source = Path(module.__file__).read_text()
+        assert "tdm" not in source, f"{module.__name__} names 'tdm'"
+
+
 # --- The repo-wide json.load guard (AC 2.4) ----------------------------------------------------
 # score is the SOLE truth DESERIALIZER. We prove it across ALL of src/ by an AST scan for the
 # json.load / json.loads attribute-call token SPECIFICALLY — NOT a bare `load` substring, which would
