@@ -1,5 +1,9 @@
 # tracklet
 
+<!-- CI badge — fill the real slug at the publish/push human gate (the repo is LOCAL until then):
+[![CI](https://github.com/<OWNER>/tracklet/actions/workflows/ci.yml/badge.svg)](https://github.com/<OWNER>/tracklet/actions/workflows/ci.yml)
+The badge only goes live AFTER the first push triggers a real GitHub Actions run — see "CI & the publish/push human gate" below. Do NOT claim CI green before that run. -->
+
 **An atomic proof of a software-first optical Space-Domain-Awareness (SDA) pipeline.**
 
 `tracklet` takes a sky image, recovers where it is pointing (blind plate-solve), finds a
@@ -38,17 +42,49 @@ definition of done.
 
 ```bash
 git clone <repo> tracklet && cd tracklet
-make setup                 # creates .venv (Python 3.14), installs deps
+make setup                 # creates .venv (Python 3.14), installs tracklet (editable) + dev deps
+#   — OR, the exact-reproduce pip path (no editable install):
+#   python3.14 -m venv .venv && .venv/bin/pip install . -c requirements.lock
 ./scripts/install_indexes.sh   # one-time: installs solve-field + ~340 MB wide-field indexes
 make test-golden           # the @solver golden e2e: render -> blind-solve -> residual < 10"
-make run                   # the one command -> out/{residual.txt, overlay.png, report.md}
+make run                   # the one command -> out/{residual.txt, overlay.png, report.md, track.tdm}
 make test                  # fast unit suite (NO solver needed; proves the seal + WCS math)
 ```
 
 The TLE + Gaia fixtures are **committed** under `data/`, so reproducing the result needs no
-network: a fresh `git clone` → `make setup` → `./scripts/install_indexes.sh` → `make test-golden`
-recovers the ~2″ residual on a clean machine. `make fetch` is **optional** — it only re-freezes the
+network: a fresh `git clone` → install → `./scripts/install_indexes.sh` → `make test-golden`
+recovers the ~2.081″ residual on a clean machine. `make fetch` is **optional** — it only re-freezes the
 fixtures from CelesTrak + Gaia (online) and is not needed to reproduce.
+
+### Install as a package — the `tracklet` console command
+
+`tracklet` is a real **pip-installable** package (single-sourced version `0.1.2`). Installing it
+exposes a `tracklet` **console command** (and a `python -m tracklet` module entry point), both of
+which reuse `run.main` verbatim — same pipeline, same flags:
+
+```bash
+pip install . -c requirements.lock   # constraints file = exact-reproduce lock
+tracklet --out out                   # the console script: synthetic scene -> out/{..., track.tdm}
+python -m tracklet --out out          # identical module entry point
+python -c "import importlib.metadata as m; print(m.version('tracklet'))"   # -> 0.1.2
+```
+
+> **`TRACKLET_DATA` for a manual stranger run.** A non-editable install lands `tracklet` in
+> `site-packages`, where the `__file__`-relative `data/` (the committed Gaia/TLE fixtures) does **not**
+> exist. For a manual install-then-run, point the CLI at the clone's fixtures:
+> `TRACKLET_DATA="$PWD/data" tracklet --out out`. The editable `make setup` install resolves `data/`
+> from the repo tree, so it needs no override; the clean-room script (below) sets `TRACKLET_DATA`
+> automatically.
+
+### Build a wheel + sdist
+
+```bash
+make build      # python -m build --no-isolation -> dist/tracklet-0.1.2-*.whl + .tar.gz
+```
+
+`make build` builds **offline** (`--no-isolation` reuses the dev-extra build backend, a Poka-Yoke
+against PyPI build-isolation on a clean machine). Run `make setup` first so `build`/`setuptools`/
+`wheel` are present in the venv. Artifacts land in `dist/` (gitignored — never committed).
 
 ### Autonomous clean-room reproduce
 
@@ -75,6 +111,35 @@ HEAD, run it on a **clean tree** — uncommitted work is invisible to it by desi
 > `TRACKLET_DATA="$CLONE/data"` so the installed CLI (and the installed-package pytest run) find the
 > clone's committed fixtures. A stranger installing the wheel sets the same env var (documented in
 > *On-disk footprint*); the editable dev install resolves `data/` from the repo tree as before.
+
+## CCSDS TDM output (`track.tdm`)
+
+On every **successful** run (synthetic **and** real), tracklet writes a **CCSDS Tracking Data
+Message** (`out/track.tdm`, or `out_real/track.tdm` for the M1 real-frame path) alongside
+`residual.txt`/`report.md`. It is a standard **TDM 503.0-B-2 RADEC** angles file — the
+machine-readable form of the same measured track:
+
+```text
+CCSDS_TDM_VERS = 2.0
+META_START
+  TIME_SYSTEM       = UTC
+  PARTICIPANT_1     = TRACKLET-SYNTH      # the real path uses the observatory name from meta.toml
+  MODE              = SEQUENTIAL
+  ANGLE_TYPE        = RADEC
+  REF_FRAME         = EME2000
+META_STOP
+DATA_START
+  <epoch> ANGLE_1 = <ra_deg>             # epoch = the exposure-MIDPOINT instant (the scored instant)
+  <epoch> ANGLE_2 = <dec_deg>
+DATA_STOP
+```
+
+The RA/Dec are `result.measured` verbatim; the epoch is the exposure **midpoint** (the same instant
+`score` is taken at). The writer (`src/tracklet/tdm.py`) is a pure downstream-of-`score` text
+formatter — it receives its inputs **in-memory** and contains **no `json.load`**, so it adds no
+reader of the sealed truth (the seal stays intact). On a typed failure (solve/detect/wrong-field,
+exits 2/3/4) **no `track.tdm` is written** — no fabricated track, exactly as `residual.txt` is
+withheld.
 
 ## Real image (M1)
 
@@ -130,6 +195,7 @@ tests/fixtures/real/fetch.sh
 # 3. Inspect the honest result:
 cat out_real/residual.txt    # -> 315.52...  (the real arcsec residual)
 cat out_real/report.md       # -> the five-source degradation report + pointing-vs-timing split
+cat out_real/track.tdm       # -> the CCSDS TDM RADEC track for this frame
 ```
 
 Expect a residual of **≈ 315.5″** and a report naming all five degradation sources with the
@@ -162,6 +228,29 @@ verbatim, flags the TLE-age along-track term as dominant, and attributes the sou
 frame (Zenodo [8102655](https://doi.org/10.5281/zenodo.8102655), **CC-BY-4.0**); see
 [`showcase/NOTICE`](showcase/NOTICE).
 
+## CI & the publish/push human gate
+
+A GitHub Actions workflow is **authored and committed** at
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) and **statically validated locally** (valid
+YAML + `tests/test_ci_workflow.py` asserts its two jobs, the Python-3.14 pin, the lockfile install,
+and the residual gate; no push/deploy/secret step). It declares two jobs on `ubuntu-latest`:
+
+- **`unit`** — `pip install . -c requirements.lock` (+ dev), `pytest -m "not solver"`: the
+  deterministic seal + WCS-convention + unit proof, cross-arch.
+- **`golden-solver`** — installs `solve-field` (apt `astrometry.net`, with a version-floor
+  assertion), wires + caches the ~340 MB indexes via the cross-platform `install_indexes.sh`, runs
+  `pytest -m solver`, and **fails if the golden residual ≥ 10″** (the reproduce-the-residual gate).
+
+> **Honest gate — read this.** `v0.1.x` is **LOCAL-only**; this repo has **no remote** until a human
+> decides to publish. **x86_64-Linux CI greenness is confirmed by the GitHub Actions run that fires
+> AFTER the human-gated push — it is NOT claimed green before that run.** Locally, the autonomous
+> clean-room (above) proves the clone→install→reproduce **recipe** on *this* architecture; the
+> **cross-architecture** proof is the human-gated Actions run, never faked. Pushing the repo, watching
+> Actions go green on a clean x86_64-Linux runner, and applying the `v0.1.2` tag are a **terminal
+> human gate** — the build loop **never auto-pushes** and never auto-creates the public repo. The CI
+> badge (commented at the top of this file) goes live only after that first real run; fill the
+> `[project.urls]` repo URL in `pyproject.toml` and the badge slug at the same publish step.
+
 ## Environment
 
 - **Python 3.14** (validated env; exact patch pinned in `requirements.lock`). A runtime assertion
@@ -173,9 +262,15 @@ frame (Zenodo [8102655](https://doi.org/10.5281/zenodo.8102655), **CC-BY-4.0**);
 ## On-disk footprint & uninstall
 
 `tracklet` itself lives in this repo. Out-of-repo state created by the plate-solver gate:
-`brew install astrometry-net`, the ~340 MB index download, and an additive `add_path` line in
-`astrometry.cfg`. To remove: `brew uninstall astrometry-net`, `rm -rf <index dir>`, and revert the
-`add_path` line. `.venv/`, `out/`, and `indexes/` are gitignored.
+`brew install astrometry-net` (Linux: `apt-get install astrometry.net`), the ~340 MB index download,
+and an additive `add_path` line in `astrometry.cfg`. To remove: `brew uninstall astrometry-net`,
+`rm -rf <index dir>`, and revert the `add_path` line.
+
+Build/run artifacts stay inside the repo and are all gitignored: `.venv/`, `out/` (incl.
+`track.tdm`), `out_real/`, `indexes/`, and the wheel/sdist output `dist/` + `build/` (run
+`make clean` to remove `out/*` + `dist/` + `build/`). The 76 MB real M1 frame and the ~340 MB indexes
+are **never committed** — they are gitignored and fetched on demand (footprint discipline). To drop a
+pip-installed copy entirely: `pip uninstall tracklet`.
 
 ## Data provenance & licences
 
