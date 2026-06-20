@@ -227,33 +227,23 @@ def test_pip_install_with_lock_constraint_resolves(tmp_path):
 
 
 @pytest.mark.solver
-def test_installed_cli_runs_synthetic_scene_end_to_end(tmp_path):
-    """AC 1.2 full claim — the INSTALLED `tracklet` console command runs the synthetic scene end to
-    end (blind solve -> detect -> measure -> score) and writes a residual. Needs solve-field +
-    indexes (the @solver gate); excluded from `pytest -m "not solver"`.
+def test_installed_wheel_cli_runs_synthetic_scene_end_to_end(installed_venv, tmp_path):
+    """AC 1.2 full claim — the NON-EDITABLE WHEEL install's `tracklet` console command runs the
+    synthetic scene end to end (blind solve -> detect -> measure -> score) and writes a residual.
+    Needs solve-field + indexes (the @solver gate); excluded from `pytest -m "not solver"`.
 
-    We invoke the console script that `pip install`'d into THIS interpreter (the dev venv's
-    `bin/tracklet`, a real installed entry point that reuses `run.main` verbatim). Why not the
-    throwaway-wheel venv? The synthetic scene reads its committed Gaia/TLE fixtures from the repo's
-    `data/` dir, which `scene.py` resolves RELATIVE TO ITS OWN __file__ (`_REPO/data`). An editable
-    install keeps `__file__` inside the repo's `src/tracklet/`, so `data/` is found; a NON-editable
-    wheel install lands in site-packages, so `_REPO/data` is absent and the synthetic scene cannot
-    run standalone. That is a real, in-scope-for-S3 fact: the plan's clean-room (S3) runs the
-    installed CLI FROM A FULL REPO CLONE (where `data/` is present), not from a bare wheel in an
-    arbitrary dir. S1 proves the console entry point is wired + runs the full pipeline; S3 proves the
-    non-editable-install-from-clone path. (Wheel-install CLI wiring is asserted by the non-solver
-    tests above via `--help`.)
-    """
-    import shutil
-
-    tracklet_cmd = Path(sys.prefix) / ("Scripts" if os.name == "nt" else "bin") / "tracklet"
-    if not tracklet_cmd.exists():
-        # Fall back to a PATH lookup (some venv layouts); skip honestly if no console script exists.
-        found = shutil.which("tracklet")
-        if found is None:
-            pytest.skip("no installed `tracklet` console script on this interpreter")
-        tracklet_cmd = Path(found)
+    The synthetic scene reads its committed Gaia/TLE fixtures from `data/`, which `scene.py` resolves
+    as `_REPO/data` in the dev tree. A non-editable wheel install lands in site-packages where that
+    `__file__`-relative path is absent, so the installed CLI resolves the fixtures via the
+    TRACKLET_DATA env override — EXACTLY the path the M2 DoD names ("clone -> install -> reproduce"):
+    a fresh clone always carries `data/`, and the S3 clean-room sets TRACKLET_DATA to the clone's
+    `data/`. Here we install the bare wheel into a throwaway venv (the `installed_venv` fixture,
+    deps included), point TRACKLET_DATA at the repo's committed `data/`, and prove the
+    wheel-installed CLI reproduces the synthetic residual — the honest full AC-1.2 claim, not a
+    dev-venv stand-in."""
+    tracklet_cmd = _bin(installed_venv, "tracklet")
     out_dir = tmp_path / "out"
+    env = {**os.environ, "TRACKLET_DATA": str(_REPO / "data")}
     out = _run(
         [
             str(tracklet_cmd),
@@ -261,10 +251,11 @@ def test_installed_cli_runs_synthetic_scene_end_to_end(tmp_path):
             str(_REPO / "config" / "default_scene.toml"),
             "--out",
             str(out_dir),
-        ]
+        ],
+        env=env,
     )
-    assert "residual:" in out, f"installed CLI did not print a residual:\n{out}"
-    assert (out_dir / "residual.txt").exists(), "installed CLI did not write residual.txt"
+    assert "residual:" in out, f"wheel-installed CLI did not print a residual:\n{out}"
+    assert (out_dir / "residual.txt").exists(), "wheel-installed CLI did not write residual.txt"
 
 
 def _parse_lock_versions(lock_path: Path) -> dict:
