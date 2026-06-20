@@ -60,6 +60,10 @@ echo "  python3.14:  $(command -v python3.14)  ($(python3.14 --version 2>&1))"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/tracklet-cleanroom.XXXXXX")"
 cleanup() { rm -rf "$TMP_ROOT"; }
 trap cleanup EXIT
+# Resolve to the PHYSICAL path: on macOS mktemp returns /var/... but the real path is /private/var/...
+# (a symlink), and Python reports the resolved path — so the site-packages assertion below would
+# spuriously mismatch unless we canonicalize TMP_ROOT here.
+TMP_ROOT="$(cd "$TMP_ROOT" && pwd -P)"
 say "1) hermetic temp dir"
 echo "  $TMP_ROOT"
 
@@ -81,11 +85,12 @@ say "3) fresh python3.14 venv + non-editable install (pip install . -c requireme
 python3.14 -m venv "$VENV_DIR"
 VPY="$VENV_DIR/bin/python"
 "$VPY" -m pip install --quiet --upgrade pip
-# NON-editable install of the package itself, constrained by the exact lock. Also install pytest from
-# the lock so we can run the non-solver suite from the install (pytest is in requirements.lock).
-( cd "$CLONE_DIR" && "$VPY" -m pip install --quiet . -c requirements.lock )
-"$VPY" -m pip install --quiet pytest -c "$CLONE_DIR/requirements.lock"
-echo "  installed tracklet (non-editable) + pytest into the fresh venv"
+# NON-editable install of the package + its declared `dev` extra (pytest + the build backend), all
+# constrained by the exact lock. The `[dev]` extra is the package's own declared test/build surface:
+# installing it (vs a bare `.` + pytest) lets the FULL `pytest -m "not solver"` suite — including the
+# packaging meta-tests that build a wheel — run GREEN from the install with NO test cherry-picking.
+( cd "$CLONE_DIR" && "$VPY" -m pip install --quiet ".[dev]" -c requirements.lock )
+echo "  installed tracklet[dev] (non-editable) into the fresh venv"
 
 # Sanity: the installed tracklet must import from SITE-PACKAGES, not the clone's src/ (proves we are
 # testing the package, not the repo tree).
