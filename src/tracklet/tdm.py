@@ -5,12 +5,10 @@ Contract: ``write_tdm(result, epoch_utc, station, out_path) -> Path``.
 A pure, downstream-of-``score`` artifact writer, SYMMETRIC to ``report.write_report``: it receives the
 measured RA/Dec (via the in-memory ``ScoreResult.measured`` ICRS SkyCoord), the exposure-MIDPOINT epoch
 (computed in ``run``), and the ``PARTICIPANT_1`` station identifier — all IN-MEMORY — and TEXT-FORMATS a
-CCSDS Tracking Data Message. It NEVER opens the sealed answer, never deserializes JSON (no ``json.load``
-/ ``json.loads``), and never reaches for the score module's private truth loader. ``score`` stays the
-sole reader of ``truth.json``; this writer is auto-covered green by the repo-wide AST guard
-``tests/test_seal.py::test_json_load_only_in_score_across_src`` (it contains no JSON deserialize), and no
-solving module imports/names it (pinned by ``test_seal.py``'s extended static guard). (Pinned by
-tests/test_tdm.py + tests/test_seal.py.)
+CCSDS Tracking Data Message. It NEVER opens the sealed answer and never deserializes any JSON — ``score``
+stays the sole reader of ``truth.json``, and this writer is auto-covered green by the repo-wide AST seal
+guard in ``tests/test_seal.py`` (it performs no JSON deserialize), while no solving module imports or
+names it (pinned by that file's extended static guard). (Pinned by tests/test_tdm.py + tests/test_seal.py.)
 
 The emitted file is a CCSDS TDM 503.0-B-2 RADEC message:
 
