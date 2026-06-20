@@ -1,5 +1,5 @@
 # tracklet — one-command interface (see README for the reproduce recipe)
-.PHONY: setup fetch run test test-golden build clean
+.PHONY: setup fetch run test test-golden build clean-room clean
 
 VENV ?= .venv
 PY   := $(VENV)/bin/python
@@ -33,6 +33,14 @@ test-golden:
 # Run `make setup` first so build/setuptools/wheel are present in the venv.
 build:
 	$(PY) -m build --no-isolation
+
+# Autonomous clean-machine proof: fresh temp clone + fresh python3.14 venv + NON-editable
+# `pip install . -c requirements.lock` -> the installed `tracklet` CLI reproduces the synthetic
+# residual < 10" + the non-solver suite green from the install. Reuses the host's solve-field +
+# wired indexes (loud remediation if absent). Hermetic; never touches the dev venv; never pushes.
+# Run on a CLEAN tree — it clones the COMMITTED HEAD.
+clean-room:
+	bash scripts/clean_room_reproduce.sh
 
 clean:
 	rm -rf out/*.fits out/*.png out/*.md out/residual.txt
