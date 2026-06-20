@@ -199,7 +199,7 @@ def test_dependency_lower_bounds_at_or_below_locked():
 def test_pip_install_with_lock_constraint_resolves(tmp_path):
     """AC 1.4 — `pip install . -c requirements.lock` resolves the locked set with no conflict.
 
-    We run pip's resolver in --dry-run --no-deps-free report mode against a fresh throwaway venv so
+    We run pip's resolver in `--dry-run` mode against a fresh throwaway venv so
     we exercise the REAL resolver (not just a version-string compare) without mutating the dev venv.
     The dependencies are already present in the dev venv's wheel cache, so this is offline-fast.
     """
