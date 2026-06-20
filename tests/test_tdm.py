@@ -282,6 +282,17 @@ def test_synthetic_solve_failure_writes_no_tdm(tmp_path, monkeypatch):
 
 def test_synthetic_detect_failure_writes_no_tdm(tmp_path, monkeypatch):
     out = tmp_path / "out"
+    # Stub the solve to SUCCEED (valid empty WCS) so the pipeline reaches the DETECT step without a
+    # real solve-field — keeps this a fast, solver-independent unit test (the CI `unit` job has no
+    # solve-field, where the real solve would fail first with exit 2 and never reach detect).
+    from astropy.wcs import WCS
+    from tracklet.solve_pointing import SolveResult
+
+    monkeypatch.setattr(
+        run_module,
+        "solve_pointing",
+        lambda image_path, scale_hint: SolveResult(wcs=WCS(naxis=2), solve_seconds=0.0),
+    )
     monkeypatch.setattr(
         run_module, "detect_streak", lambda image_path: DetectFailure(reason="x")
     )

@@ -127,6 +127,19 @@ def test_solve_failure_is_honest_no_residual(tmp_path, capsys, monkeypatch):
 def test_detect_failure_is_honest_no_residual(tmp_path, capsys, monkeypatch):
     out = tmp_path / "out"
 
+    # Stub the blind solve to SUCCEED (a valid empty WCS) so the pipeline reaches the DETECT step
+    # WITHOUT a real solve-field. This test is about run's DETECT-failure orchestration, not the
+    # solver, so it must stay a fast, solver-independent unit test: on a box where solve-field is
+    # absent (e.g. the CI `unit` job) the REAL solve would fail FIRST (exit 2) and never reach detect.
+    from astropy.wcs import WCS
+    from tracklet.solve_pointing import SolveResult
+
+    monkeypatch.setattr(
+        run_module,
+        "solve_pointing",
+        lambda image_path, scale_hint: SolveResult(wcs=WCS(naxis=2), solve_seconds=0.0),
+    )
+
     def _fake_detect(image_path):
         return DetectFailure(reason="no linear features (test injection)")
 
