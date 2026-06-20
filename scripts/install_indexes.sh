@@ -129,13 +129,31 @@ main() {
   done
 
   CFG="$(find_cfg)"
+  # Append to the astrometry cfg, escalating with sudo ONLY when it is not directly writable — e.g.
+  # the root-owned apt /etc/astrometry.cfg on a Linux CI runner. The macOS brew cfg is user-writable,
+  # so no sudo is used there. A cfg that is neither writable nor sudo-writable fails LOUDLY (never a
+  # silent skip that would leave solve-field unable to find the indexes).
+  _cfg_append() {  # _cfg_append <verbatim-text>
+    if [[ -w "$CFG" ]]; then
+      printf '%s' "$1" >> "$CFG"
+    elif command -v sudo >/dev/null 2>&1; then
+      printf '%s' "$1" | sudo tee -a "$CFG" >/dev/null
+    else
+      echo "ERROR: $CFG is not writable and sudo is unavailable — cannot wire add_path." >&2
+      exit 1
+    fi
+  }
   if ! grep -qxF "add_path $INDEX_DIR" "$CFG" 2>/dev/null; then
-    printf '\n# tracklet wide-field indexes (added by install_indexes.sh)\nadd_path %s\n' "$INDEX_DIR" >> "$CFG"
+    printf -v _add '\n# tracklet wide-field indexes (added by install_indexes.sh)\nadd_path %s\n' "$INDEX_DIR"
+    _cfg_append "$_add"
     echo "appended 'add_path $INDEX_DIR' to $CFG"
   else
     echo "astrometry.cfg already points at $INDEX_DIR"
   fi
-  grep -qE '^\s*autoindex' "$CFG" 2>/dev/null || echo "autoindex" >> "$CFG"
+  if ! grep -qE '^\s*autoindex' "$CFG" 2>/dev/null; then
+    printf -v _ai 'autoindex\n'
+    _cfg_append "$_ai"
+  fi
 
   echo "Done. Installed indexes:"
   ls -lh "$INDEX_DIR"/index-*.fits
