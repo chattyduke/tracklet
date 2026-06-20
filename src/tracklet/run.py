@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import sys
 import tomllib
 from pathlib import Path
@@ -48,8 +49,18 @@ from tracklet.solve_pointing import SolveFailure, solve_pointing
 from tracklet.tdm import write_tdm
 
 _REPO = Path(__file__).resolve().parent.parent.parent
-_DEFAULT_CONFIG = _REPO / "config" / "default_scene.toml"
-_DEFAULT_OUT = _REPO / "out"
+# Default config/out anchor. In the dev tree this is `_REPO` (the repo root, UNCHANGED for every dev /
+# test / M0 / M1 path). A NON-editable wheel install lands in site-packages where the
+# `__file__`-relative `_REPO/config` is absent — so the installed CLI anchors the DEFAULT config (and
+# out dir) to TRACKLET_DATA's parent (the clone root carries both `data/` and its sibling `config/`).
+# This is the EXACT symmetric closure of the `scene.py` TRACKLET_DATA fix (S1) for `config/`: an
+# explicit `--config` always overrides this, and an unset/empty env is falsy → the `_REPO` fallback,
+# byte-identical to before. Resolves a config DIR only, never the sealed answer — the seal is intact
+# (this module names no sealed artifact and stays a non-reader; score remains the sole truth reader).
+_DATA_ENV = os.environ.get("TRACKLET_DATA")
+_ROOT = Path(_DATA_ENV).resolve().parent if _DATA_ENV else _REPO
+_DEFAULT_CONFIG = _ROOT / "config" / "default_scene.toml"
+_DEFAULT_OUT = _ROOT / "out"
 
 
 def _parse_args(argv: "list[str] | None") -> argparse.Namespace:

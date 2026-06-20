@@ -50,6 +50,32 @@ network: a fresh `git clone` → `make setup` → `./scripts/install_indexes.sh`
 recovers the ~2″ residual on a clean machine. `make fetch` is **optional** — it only re-freezes the
 fixtures from CelesTrak + Gaia (online) and is not needed to reproduce.
 
+### Autonomous clean-room reproduce
+
+`make clean-room` (or `bash scripts/clean_room_reproduce.sh`) is the **autonomous clean-machine
+proof** of the `pip`-installable package. It runs end-to-end with no manual steps:
+
+```bash
+make clean-room
+```
+
+It creates a **fresh temp dir**, `git clone`s the **committed HEAD** of this repo, builds a **fresh
+`python3.14` venv** (never your dev `.venv`), does a **non-editable** `pip install . -c
+requirements.lock`, then runs the **installed** `tracklet` CLI on the synthetic scene and asserts the
+residual is **< 10″** (the real number is echoed) — and finally runs `pytest -m "not solver"` from the
+**installed package** (not the source tree). The temp dir is torn down on exit; it reuses the host's
+`solve-field` + wired indexes read-only and **never pushes**. If `solve-field` or the indexes are
+missing it prints a loud remediation and exits non-zero (it tests the *package install + reproduce*,
+not the solver install — install those first via `brew install astrometry-net` /
+`apt-get install astrometry.net` + `./scripts/install_indexes.sh`). Because it clones the committed
+HEAD, run it on a **clean tree** — uncommitted work is invisible to it by design.
+
+> **Why `TRACKLET_DATA`:** a non-editable wheel lands `tracklet` in `site-packages`, where the
+> `__file__`-relative `data/` (the committed Gaia/TLE fixtures) does not exist. The clean-room exports
+> `TRACKLET_DATA="$CLONE/data"` so the installed CLI (and the installed-package pytest run) find the
+> clone's committed fixtures. A stranger installing the wheel sets the same env var (documented in
+> *On-disk footprint*); the editable dev install resolves `data/` from the repo tree as before.
+
 ## Real image (M1)
 
 M1 takes the **exact M0 pipeline — unchanged** — and runs it on **one real, public telescope frame**
