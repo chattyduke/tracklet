@@ -1,0 +1,101 @@
+# tracklet CI — M2 Sprint 4 (authored + statically validated; the cross-arch x86_64-Linux greenness
+# is the S6 human-gated Actions run, NOT faked locally). The steps MIRROR the locally-proven recipes:
+#   - `pip install . -c requirements.lock` (S1 lockfile install) + the `dev` extra,
+#   - `./scripts/install_indexes.sh` (S3 cross-platform index wiring),
+#   - `pytest -m "not solver"` / `pytest -m solver` (the existing markers),
+#   - the `score` 10" residual gate (the golden e2e's own assertion is the gate).
+# No push/deploy/secret/publish step — the `on:` push is a TRIGGER, not a deploy action.
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  # Fast deterministic job: seal + WCS-convention + unit cross-arch proof. No solver, no network.
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14 (honors the tracklet._env minor guard — NOT relaxed)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # Install tracklet from the exact-reproduce lockfile + the dev extra (pytest). Mirrors S1's
+      # locally-proven `pip install . -c requirements.lock`.
+      - name: Install tracklet (lockfile-constrained) + dev extra
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]" -c requirements.lock
+
+      - name: Unit suite (no solver)
+        run: pytest -m "not solver" -q
+
+  # Heavier job: install solve-field + wire the 4100-series indexes, then run the golden e2e. The job
+  # FAILS if the golden residual >= 10" — the golden e2e's own assertion is the reproduce-the-residual
+  # gate (no new threshold introduced here).
+  golden-solver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14 (honors the tracklet._env minor guard — NOT relaxed)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # CI risk (a): the apt `astrometry.net` solve-field must be new enough to read the 4100-series
+      # single-file .fits indexes. Pin a concrete version floor of >= 0.80 and FAIL LOUDLY if too old.
+      # ubuntu-latest ships >> that (0.94+ on 22.04, 0.97+ on 24.04), so the floor has generous margin;
+      # the FIRST human-gated Actions run empirically confirms the exact packaged version. If a future
+      # runner image ever regresses below the floor, fall back to a build-from-source / PPA install
+      # (documented here): add the astrometry.net PPA, or build from
+      # https://github.com/dstndstn/astrometry.net per its INSTALL.
+      - name: Install solve-field (astrometry.net) with a >= 0.80 version floor
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y astrometry.net
+          ver="$(solve-field --version 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)"
+          echo "solve-field version: ${ver}"
+          # Loud Andon: a too-old solver fails the job NOW, never silently after the human push.
+          # Fallback if this ever trips: build from source / add the astrometry.net PPA (see comment).
+          python - "$ver" <<'PY'
+          import sys
+          floor = (0, 80)
+          raw = sys.argv[1]
+          try:
+              got = tuple(int(x) for x in raw.split(".")[:2])
+          except ValueError:
+              sys.exit(f"could not parse solve-field version {raw!r}")
+          if got < floor:
+              sys.exit(
+                  f"solve-field {raw} is below the >= 0.80 floor required to read the 4100-series "
+                  f"single-file indexes. Fall back to a build-from-source / PPA install (see the "
+                  f"job comment)."
+              )
+          print(f"solve-field {raw} >= 0.80 floor OK")
+          PY
+
+      - name: Install tracklet (lockfile-constrained) + dev extra
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]" -c requirements.lock
+
+      # CI risk (b): on an actions/cache MISS the next step downloads ~340 MB of indexes; an
+      # astrometry.net 404 / rate-limit fails the job LOUDLY via install_indexes.sh's Andon hard-stop
+      # (an honest red, not a hang). The cache key is the 4100-series index scale set.
+      - name: Cache astrometry.net 4100-series indexes
+        uses: actions/cache@v4
+        with:
+          path: indexes
+          key: astrometry-indexes-4100-4107_4108_4109_4110_4111_4112_4113
+
+      - name: Wire the indexes (cross-platform install_indexes.sh — S3)
+        run: ./scripts/install_indexes.sh
+
+      # Set TRACKLET_DATA so the checked-out synthetic run finds the committed data/ fixtures (the S1/S3
+      # env override in scene.py / run.py). The checkout carries data/ + config/ at the repo root.
+      - name: Golden e2e (@solver) — fails if the residual >= 10"
+        env:
+          TRACKLET_DATA: ${{ github.workspace }}/data
+        run: pytest -m solver -q
