@@ -74,13 +74,23 @@ def _parse_epoch(s: str) -> dt.datetime:
 
 
 def _make_result(ra_deg: float, dec_deg: float):
-    """An in-memory ScoreResult-shaped object carrying a measured ICRS SkyCoord (no truth read)."""
+    """An in-memory ScoreResult-shaped object carrying a measured ICRS SkyCoord (no truth read).
+
+    `truth` is set DELIBERATELY DISTINCT from `measured` (a few arcsec off — within the 10" gate so
+    `passed=True` stays consistent) so the AC 2.1 assertions PIN that write_tdm emits the MEASURED
+    RA/Dec, never the sealed truth. A measured→truth swap in the writer would shift the emitted angles
+    by ~arcsec and FAIL the verbatim `ra_val == ra_deg` / `dec_val == dec_deg` checks below — closing a
+    fabrication-adjacent path the seal AST guards cannot see (it is not a json.load)."""
     from tracklet.score import ScoreResult
 
     measured = SkyCoord(ra_deg * u.deg, dec_deg * u.deg, frame="icrs")
-    truth = SkyCoord(ra_deg * u.deg, dec_deg * u.deg, frame="icrs")
+    truth = SkyCoord((ra_deg + 1e-3) * u.deg, (dec_deg + 1e-3) * u.deg, frame="icrs")
     return ScoreResult(
-        residual_arcsec=0.0, measured=measured, truth=truth, threshold_arcsec=10.0, passed=True
+        residual_arcsec=float(measured.separation(truth).to(u.arcsec).value),
+        measured=measured,
+        truth=truth,
+        threshold_arcsec=10.0,
+        passed=True,
     )
 
 
