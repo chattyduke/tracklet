@@ -15,7 +15,7 @@ repo_path = "/Users/samuelleishman/tracklet"
 # plan from current_milestone's plan_path and this field is vestigial. The active milestone M2 is UNPLANNED
 # (its plan_path = "") → it needs a FRESH planning tick. (M0 @ v0.1.0; M1 @ v0.1.1.)
 # Per-milestone-plan-map card 2026-06-19-per-milestone-plan-map (config gate: schema-valid dry-run).
-approved_plan_path = "/Users/samuelleishman/.claude/plans/plan-the-m1-real-image-snappy-bunny.md"
+approved_plan_path = "/Users/samuelleishman/.claude/plans/plan-the-m2-packaging-glossy-lighthouse.md"
 
 [poka_yoke]
 # tracklet's sealed-truth / non-circularity invariant. render is the SOLE writer of truth.json;
@@ -48,7 +48,8 @@ dod = "real image: run the full pipeline on a genuine telescope / all-sky frame 
 
 [[milestones]]
 id = "M2"
-plan_path = ""  # unset — M2 needs a FRESH planning tick (the active milestone as of 2026-06-19)
+plan_path = "/Users/samuelleishman/.claude/plans/plan-the-m2-packaging-glossy-lighthouse.md"
+plan_sha256 = "2d138b883efa9949c8c104b803bfb5204097522399f4c10e20d61954b856d008"  # LOCKED at the M1→M2 boundary (tick 28); out-of-band /ultraplan plan (3 adversarial critic rounds, converged 4/5/5/5/5)
 dod = "packaging / CI / pip: stranger-reproducible — clone -> install -> reproduce the arcsec residual unaided; CI green on a clean machine; pip-installable"
 
 [[milestones]]
