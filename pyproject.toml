@@ -47,9 +47,9 @@ dependencies = [
 ]
 
 [project.urls]
-# Placeholder repo URL — filled at the publish/push human gate (the repo is LOCAL until then).
-Homepage = "https://github.com/REPLACE-AT-PUBLISH/tracklet"
-Repository = "https://github.com/REPLACE-AT-PUBLISH/tracklet"
+# Repo URL filled at the publish/push human gate (chattyduke/tracklet, public).
+Homepage = "https://github.com/chattyduke/tracklet"
+Repository = "https://github.com/chattyduke/tracklet"
 
 [project.scripts]
 # The console entry point reuses run.main VERBATIM (it already returns an int rc and defaults to

@@ -1,8 +1,6 @@
 # tracklet
 
-<!-- CI badge — fill the real slug at the publish/push human gate (the repo is LOCAL until then):
-[![CI](https://github.com/<OWNER>/tracklet/actions/workflows/ci.yml/badge.svg)](https://github.com/<OWNER>/tracklet/actions/workflows/ci.yml)
-The badge only goes live AFTER the first push triggers a real GitHub Actions run — see "CI & the publish/push human gate" below. Do NOT claim CI green before that run. -->
+[![CI](https://github.com/chattyduke/tracklet/actions/workflows/ci.yml/badge.svg)](https://github.com/chattyduke/tracklet/actions/workflows/ci.yml)
 
 **An atomic proof of a software-first optical Space-Domain-Awareness (SDA) pipeline.**
 
