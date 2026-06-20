@@ -7,6 +7,7 @@ no network and no `truth.json` (the sealed sat position is written only by `rend
 """
 from __future__ import annotations
 
+import os
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -119,8 +120,15 @@ def build_scene(config_path: str) -> SceneConfig:
 # Offline fixture loaders (read committed data/ snapshots — no network, no truth).
 # ---------------------------------------------------------------------------
 
+# The committed synthetic data fixtures (Gaia CSV + TLE) live at the repo-root `data/` in the dev
+# tree, and a fresh CLONE has them by definition. A NON-editable wheel install lands in site-packages
+# where the `__file__`-relative `_REPO/data` is absent, so an installed CLI resolves the fixtures via
+# the TRACKLET_DATA env override — the documented clone→install→reproduce path (the S3 clean-room)
+# sets it to the clone's `data/`. Default is the dev-tree `_REPO/data`, UNCHANGED for every existing
+# dev / test / M0 / M1 path. This is fixture data, never `truth.json` — the seal is unaffected
+# (scene reads no truth; only `score` deserializes the sealed truth).
 _REPO = Path(__file__).resolve().parent.parent.parent
-_DATA = _REPO / "data"
+_DATA = Path(os.environ["TRACKLET_DATA"]) if os.environ.get("TRACKLET_DATA") else _REPO / "data"
 
 
 @dataclass(frozen=True)

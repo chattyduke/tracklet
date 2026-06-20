@@ -4,26 +4,65 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tracklet"
-version = "0.1.0"
+# Single-sourced version: read from tracklet.__version__ (see [tool.setuptools.dynamic] below).
+# There is exactly ONE place the version lives — src/tracklet/__init__.py — so it can never drift.
+dynamic = ["version"]
 description = "Optical Space-Domain-Awareness atomic proof: sky image -> plate-solve -> streak detection -> position measurement -> arcsecond residual vs known truth."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.14,<3.15"  # mirrors the runtime minor-guard in tracklet._env (validated env)
 authors = [{ name = "Sam Leishman" }]
+keywords = [
+  "astronomy",
+  "astrometry",
+  "space-domain-awareness",
+  "plate-solving",
+  "satellite-tracking",
+  "optical-tracking",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Astronomy",
+  "Topic :: Scientific/Engineering :: Image Processing",
+]
+# Lower bounds = the currently-locked MINOR (always <= the version pinned in requirements.lock), so a
+# bare `pip install tracklet` gets a known-good floor while `pip install . -c requirements.lock`
+# (the exact-reproduce path) can NEVER conflict with these bounds. Refresh the floors when the lock's
+# minor advances. (Verified <= lock by tests/test_packaging.py::test_dependency_lower_bounds_*.)
 dependencies = [
-  "numpy",
-  "scipy",
-  "astropy",
-  "astroquery",
-  "skyfield",
-  "opencv-python",
-  "scikit-image",
-  "matplotlib",
-  "photutils",
+  "numpy>=2.4",
+  "scipy>=1.17",
+  "astropy>=8.0",
+  "astroquery>=0.4",
+  "skyfield>=1.54",
+  "opencv-python>=4.13",
+  "scikit-image>=0.26",
+  "matplotlib>=3.11",
+  "photutils>=3.0",
 ]
 
+[project.urls]
+# Placeholder repo URL — filled at the publish/push human gate (the repo is LOCAL until then).
+Homepage = "https://github.com/REPLACE-AT-PUBLISH/tracklet"
+Repository = "https://github.com/REPLACE-AT-PUBLISH/tracklet"
+
+[project.scripts]
+# The console entry point reuses run.main VERBATIM (it already returns an int rc and defaults to
+# sys.argv) — no pipeline logic change.
+tracklet = "tracklet.run:main"
+
 [project.optional-dependencies]
-dev = ["pytest"]
+# `build`/`setuptools`/`wheel` make the dev venv a self-contained build host so
+# `python -m build --no-isolation` works on a clean machine without PyPI build-isolation.
+dev = ["pytest", "build", "setuptools", "wheel"]
+
+[tool.setuptools.dynamic]
+version = { attr = "tracklet.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
