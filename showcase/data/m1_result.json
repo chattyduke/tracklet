@@ -1,0 +1,67 @@
+{
+  "_comment": "FROZEN honest snapshot of a real M1 run (out_real/, run 2026-06-19). NOT the sealed truth.json; NOT recomputed by the showcase page. Every figure is anchored to tests/fixtures/real/PROVENANCE.md and verified numerically by tests/test_showcase.py::test_ac52b_display_data_matches_provenance_numerically. A fresh clone has no real frame to recompute from, so this committed snapshot IS the page's only data source.",
+  "milestone": "M1",
+  "version_tag": "v0.1.1",
+  "residual_arcsec": 315.523604,
+  "residual_arcmin": 5.26,
+  "residual_threshold_arcsec": 10.0,
+  "passes_synthetic_gate": false,
+  "satellite_name": "BLUEWALKER 3",
+  "norad_id": 53807,
+  "intl_designator": "2022-111AL",
+  "frame_member": "BW3_DDOTI_data/20221118/20221118T024706C1o.fits.fz",
+  "instrument": "DDOTI camera C1 (28-cm f/2.2), OAN-SPM San Pedro Martir, Mexico",
+  "exposure_start_utc": "2022-11-18T02:47:16.782",
+  "exposure_s": 10.0,
+  "recovered_center_ra_deg": 305.5565,
+  "recovered_center_dec_deg": -14.9640,
+  "expected_center_ra_deg": 305.5563,
+  "expected_center_dec_deg": -14.9639,
+  "plausibility_separation_deg": 0.0002,
+  "plausibility_tolerance_deg": 1.705,
+  "detect_length_px": 4956,
+  "detect_angle_deg": 126.16,
+  "tle_age_days": 0.598,
+  "tle_epoch_utc": "2022-11-17T12:25:34.6",
+  "measured_ra_deg": 306.482585,
+  "measured_dec_deg": -14.965976,
+  "truth_ra_deg": 306.525249,
+  "truth_dec_deg": -14.888631,
+  "pointing_timing_split_dra_arcsec": -148.4,
+  "pointing_timing_split_ddec_arcsec": -278.4,
+  "degradation_sources": [
+    {
+      "name": "TLE-age along-track (timing / exposure-midpoint)",
+      "dominant": true,
+      "note": "The satellite-truth is an SGP4 propagation of a TLE whose epoch precedes the exposure by 0.598 d; over that age a ~arcminutes/second LEO object accrues real along-track slip. The DOMINANT term on a real LEO frame."
+    },
+    {
+      "name": "atmosphere / seeing / refraction",
+      "dominant": false,
+      "note": "Turbulence blurs the PSF and differential refraction shifts the apparent position — absent on the synthetic frame, present on every real ground-based exposure."
+    },
+    {
+      "name": "real optics / PSF / aberration",
+      "dominant": false,
+      "note": "A real telescope+camera PSF (coma, field curvature, focus) is wider and less symmetric than the synthetic Gaussian, biasing the streak-midpoint centroid."
+    },
+    {
+      "name": "unknown plate scale / distortion",
+      "dominant": false,
+      "note": "The true plate scale and higher-order distortion are recovered only approximately by the blind solve (no distortion polynomial fit), unlike the exact synthetic WCS."
+    },
+    {
+      "name": "detector noise (read + shot)",
+      "dominant": false,
+      "note": "Real read noise and photon shot noise perturb the centroid; the synthetic frame's noise model is idealised."
+    }
+  ],
+  "observatory": "OAN-SPM / DDOTI (San Pedro Martir, MX)",
+  "plate_solver": "astrometry.net solve-field (blind — no position seed)",
+  "source": {
+    "title": "Raw FITS — BlueWalker 3 (DDOTI)",
+    "zenodo_record": "8102655",
+    "doi": "10.5281/zenodo.8102655",
+    "licence": "CC-BY-4.0"
+  }
+}

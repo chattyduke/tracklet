@@ -1,0 +1,23 @@
+tracklet showcase — third-party attribution
+============================================
+
+The M1 result displayed by showcase/index.html is derived from a real, public
+telescope frame:
+
+    "Raw FITS ... BlueWalker 3" (DDOTI / OAN-SPM)
+    Zenodo record 8102655 — DOI 10.5281/zenodo.8102655
+    Licence: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)
+
+The frame is a 10-second DDOTI exposure of BlueWalker 3 (NORAD 53807), taken
+2022-11-18 02:47 UTC from OAN-SPM, San Pedro Martir, Mexico.
+
+This NOTICE is committed unconditionally. It attributes the SOURCE FRAME the M1
+result is derived from, whether or not the optional overlay thumbnail
+(showcase/assets/m1_overlay.png) is present — the page degrades to numbers-only
+without the thumbnail, but the source-frame attribution still applies.
+
+The frame itself is NOT redistributed in this repository (multi-MB binaries stay
+gitignored and are fetched on demand); only the precomputed numeric result of
+running the tracklet pipeline on it is committed, in showcase/data/m1_result.json.
+
+tracklet's own code is MIT-licensed (see LICENSE at the repository root).

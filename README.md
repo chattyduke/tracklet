@@ -143,6 +143,25 @@ asserts exactly this end-to-end; it auto-skips if the frame has not been fetched
 > the real number — is the whole milestone. A current TLE would shrink the dominant term
 > substantially; that is future work, not part of the V0.1.1 claim.
 
+### Showcase page (static, zero-backend)
+
+A single static page presents the precomputed M1 result — no server, no compute, no input:
+
+```bash
+make showcase                  # scripts/build_showcase.py -> showcase/index.html
+open showcase/index.html       # opens over file:// — no server needed
+```
+
+[`showcase/index.html`](showcase/index.html) is generated from the committed honest snapshot
+[`showcase/data/m1_result.json`](showcase/data/m1_result.json) (a frozen real-run result, **not** the
+sealed `truth.json`, and **not** recomputed by the page). The figures on the page are anchored to
+`tests/fixtures/real/PROVENANCE.md` by a numeric anti-drift test, so the snapshot can never silently
+diverge from the real run. The generator lives in `scripts/` (outside `src/`) deliberately, so it can
+deserialize its display data without touching the sealed-truth seal. The page states the honest 315.5″
+verbatim, flags the TLE-age along-track term as dominant, and attributes the source DDOTI / BlueWalker-3
+frame (Zenodo [8102655](https://doi.org/10.5281/zenodo.8102655), **CC-BY-4.0**); see
+[`showcase/NOTICE`](showcase/NOTICE).
+
 ## Environment
 
 - **Python 3.14** (validated env; exact patch pinned in `requirements.lock`). A runtime assertion

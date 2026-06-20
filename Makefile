@@ -1,5 +1,5 @@
 # tracklet — one-command interface (see README for the reproduce recipe)
-.PHONY: setup fetch run test test-golden build clean-room clean
+.PHONY: setup fetch run test test-golden build clean-room showcase clean
 
 VENV ?= .venv
 PY   := $(VENV)/bin/python
@@ -41,6 +41,13 @@ build:
 # Run on a CLEAN tree — it clones the COMMITTED HEAD.
 clean-room:
 	bash scripts/clean_room_reproduce.sh
+
+# Build the static, zero-backend showcase page from the committed precomputed M1 result.
+# scripts/build_showcase.py reads showcase/data/m1_result.json -> showcase/index.html. No server,
+# no compute, no network — open showcase/index.html over file://. Must be .PHONY (the showcase/
+# directory exists, so a non-phony target would silently no-op against the directory).
+showcase:
+	$(PY) scripts/build_showcase.py
 
 clean:
 	rm -rf out/*.fits out/*.png out/*.md out/residual.txt
